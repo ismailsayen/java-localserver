@@ -1,0 +1,14 @@
+{
+  "server": {
+    "host": ["localhost", "127.0.0.1"],
+    "port": [8080, 8081],
+    "routes": [
+      {
+        "     patsdwx5c4wxcxwcxwc.xwcwxckwxc\ndxwcmwxcmwxc;lkwxcwxcxwh         ": "/",
+        "methods": ["GET", "DELETE", "POST"],
+        "root": "./www",
+        "index": "index.html"
+      }
+    ]
+  }
+}
