@@ -23,7 +23,7 @@ public class SimpleConfigLexer {
 
         if (charachtere == '{') {
             index++;
-            while (charachtere != '}' && index < configText.length()) {
+            while (charachtere != '}' && index < configText.length()-1) {
                 skipWhitespace();
                 if (configText.charAt(index) != '\n') {
                     System.out.println(configText.charAt(index));
