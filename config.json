@@ -1,14 +1,24 @@
-{
-  "\"      patsdwx5c4wxcxwcxwc.xwcwxckwxc\ndxwcmwxcmwxc;lkwx\"cwxcxwh         \"": {
+[
+  {
     "host": ["localhost", "127.0.0.1"],
-    "port": [8080, 8081],
+    "port": ["8080", "8081"],
+    "name": "Server1",
     "routes": [
       {
-        "    patsdwx5c4wxcxwcxwc.xwcwxckwxc\tdxwcmwxcmwxc;lkwx\bcwxcxwh         ": "/",
-        "methods": ["GET", "DELETE", "POST"],
-        "root": "./www",
-        "index": "index.html"
+        "path": "/",
+        "methods": ["GET", "POST"]
+      }
+    ]
+  },
+  {
+    "host": ["localhost", "127.0.0.1"],
+    "port": ["8080", "8081"],
+    "name": "Server2",
+    "routes": [
+      {
+        "path": "/",
+        "methods": ["GET", "POST"]
       }
     ]
   }
-}
+]

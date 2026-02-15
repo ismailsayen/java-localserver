@@ -1,0 +1,1 @@
+javac -d build src/config/*.java src/*.java && java -cp build Main

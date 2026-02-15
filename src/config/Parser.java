@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.List;
 
 
 
@@ -28,7 +27,7 @@ public class Parser {
         this.content = content;
     }
 
-    public List<Token> parse() throws FileNotFoundException, IOException {
+    public Object parse() throws FileNotFoundException, IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(this.configPath))) {
             StringBuilder sb = new StringBuilder();
             String line = br.readLine();

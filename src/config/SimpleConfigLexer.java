@@ -1,5 +1,6 @@
 package config;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,80 +22,103 @@ public class SimpleConfigLexer {
     }
 
     private List<Token> tokenize() {
-        Character charachtere = configText.charAt(index);
+        skipWhitespace();
 
-        if (charachtere == '{') {
+        Object result = parseValue(); 
 
-            Map<String, Object> object = parseObject();
-            System.out.println(object);
-        }
+        System.out.println("result = " + result);
+
         return tokens;
     }
 
     private Map<String, Object> parseObject() {
+
         Map<String, Object> map = new HashMap<>();
         index++; // skip '{'
         skipWhitespace();
-        String key = extractKey();
-        map.put(key, key);
-        System.out.println("KEY=>"+key);
-        while (configText.charAt(index) != '}' && index < configText.length() - 1) {
-            if (configText.charAt(index) == ':') {
-                System.out.println("zz");
-                index++;
-            }
+
+        while (index < configText.length() && configText.charAt(index) != '}') {
+
+            skipWhitespace();
+            String key = extractString();
+
+            skipWhitespace();
+            index++; // skip :
+
+            skipWhitespace();
+            Object value = parseValue(); // valeur
+
+            map.put(key, value);
+
+            skipWhitespace();
+
             if (configText.charAt(index) == ',') {
-                break;
-            }
-            if (configText.charAt(index) == '{') {
-                Map<String, Object> object1 = parseObject();
-                System.out.println("recursive" + object1);
-            }
-            if (configText.charAt(index) == '[') {
-             parseArray();
-            }
-
-            index++;
-
-            System.out.println("obj" + configText.charAt(index));
-
-        }
-        return map;
-
-    }
-
-    private void parseArray() {
-       
-        index++; // skip '['
-        skipWhitespace();
-        // String key = extractKey();
-       
-
-        while (configText.charAt(index) != '}' && index < configText.length() - 1) {
-            
-            
-
-            index++;
-
-            System.out.println("arr" + configText.charAt(index));
-
-        }
- 
-
-    }
-
-    private String extractKey() {
-        index++;
-        StringBuilder key = new StringBuilder();
-        while (configText.charAt(index) != '"' && index < configText.length() - 1) {
-            if (configText.charAt(index) == '\\' && configText.charAt(index + 1) == '"') {
                 index++;
             }
-            key.append(configText.charAt(index));
+
+            skipWhitespace();
+        }
+
+        index++; // skip '}'
+        return map;
+    }
+
+    private Object parseValue() {
+
+        char current = configText.charAt(index);
+
+        if (current == '"') {
+            return extractString();
+        }
+
+        if (current == '{') {
+            return parseObject();
+        }
+
+        if (current == '[') {
+            return parseArray();
+        }
+
+        return null;
+    }
+
+    private List<Object> parseArray() {
+
+        List<Object> list = new ArrayList<>();
+        index++; 
+        skipWhitespace();
+
+        while (index < configText.length() && configText.charAt(index) != ']') {
+
+            skipWhitespace();
+            list.add(parseValue());
+
+            skipWhitespace();
+
+            if (configText.charAt(index) == ',') {
+                index++;
+            }
+
+            skipWhitespace();
+        }
+
+        index++; // skip ']'
+        return list;
+    }
+
+    private String extractString() {
+
+        index++; // skip opening "
+
+        StringBuilder sb = new StringBuilder();
+
+        while (index < configText.length() && configText.charAt(index) != '"') {
+            sb.append(configText.charAt(index));
             index++;
         }
 
-        return key.toString().trim();
+        index++; // skip closing "
+        return sb.toString();
     }
 
     private void skipWhitespace() {
