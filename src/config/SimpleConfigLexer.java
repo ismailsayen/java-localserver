@@ -21,10 +21,6 @@ public class SimpleConfigLexer {
 
         Object result = parseValue();
 
-        if ( (result instanceof List)){
-            System.out.println("yessssss");
-        }
-
         System.out.println("result = " + result);
 
         return result;
@@ -78,7 +74,7 @@ public class SimpleConfigLexer {
             return parseArray();
         }
 
-        if (current >= '0' && current < '9') {
+        if (current >= '0' && current <= '9') {
             return extractNumber();
         }
 
