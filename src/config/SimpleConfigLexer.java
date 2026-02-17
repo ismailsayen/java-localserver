@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import customError.FormatException;
+
 public class SimpleConfigLexer {
 
     private final String configText;
@@ -16,7 +18,7 @@ public class SimpleConfigLexer {
 
     }
 
-    public Object tokenize() {
+    public Object tokenize() throws FormatException {
         skipWhitespace();
 
         Object result = parseValue();
@@ -26,7 +28,7 @@ public class SimpleConfigLexer {
         return result;
     }
 
-    private Map<String, Object> parseObject() {
+    private Map<String, Object> parseObject() throws FormatException {
 
         Map<String, Object> map = new HashMap<>();
         index++; // skip '{'
@@ -38,6 +40,9 @@ public class SimpleConfigLexer {
             String key = extractString();
 
             skipWhitespace();
+            if (configText.charAt(index) != ':') {
+                throw new FormatException("Expected ':' after key");
+            }
             index++; // skip :
 
             skipWhitespace();
@@ -53,12 +58,14 @@ public class SimpleConfigLexer {
 
             skipWhitespace();
         }
-
+        if (configText.charAt(index) != '}') {
+            throw new FormatException("all Object need a close }");
+        }
         index++; // skip '}'
         return map;
     }
 
-    private Object parseValue() {
+    private Object parseValue() throws FormatException {
 
         char current = configText.charAt(index);
 
@@ -78,10 +85,47 @@ public class SimpleConfigLexer {
             return extractNumber();
         }
 
-        return null;
+        if (current == 't' || current == 'f') {
+            return parseBoolean();
+        }
+
+        if (current == 'n') {
+                return parseNull();
+        }
+
+        throw new FormatException("Unexpected character: " + current);
     }
 
-    private List<Object> parseArray() {
+    private Boolean parseBoolean() throws FormatException {
+        skipWhitespace();
+
+        if (configText.startsWith("true", index)) {
+            index += 4;
+            return true;
+        }
+
+        if (configText.startsWith("false", index)) {
+            index += 5;
+            return false;
+        }
+
+        throw new FormatException("Invalid boolean value at position " + index);
+
+    }
+
+    private Object parseNull() throws FormatException {
+        skipWhitespace();
+
+        if (configText.startsWith("null", index)) {
+            index += 4;
+            return null;
+        }
+
+        throw new FormatException("Invalid null value at position " + index);
+
+    }
+
+    private List<Object> parseArray() throws FormatException {
 
         List<Object> list = new ArrayList<>();
         index++;
@@ -100,7 +144,9 @@ public class SimpleConfigLexer {
 
             skipWhitespace();
         }
-
+        if (configText.charAt(index) != ']') {
+            throw new FormatException("all Arrays need a close ]");
+        }
         index++; // skip ']'
         return list;
     }
@@ -117,7 +163,7 @@ public class SimpleConfigLexer {
         return sb.toString();
     }
 
-    private String extractString() {
+    private String extractString() throws FormatException {
 
         index++; // skip opening "
 
@@ -131,7 +177,9 @@ public class SimpleConfigLexer {
             index++;
 
         }
-
+        if (configText.charAt(index) != '"') {
+            throw new FormatException("all Strings need a close \"");
+        }
         index++; // skip closing "
         return sb.toString();
     }
