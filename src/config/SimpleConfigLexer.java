@@ -8,27 +8,26 @@ import java.util.Map;
 public class SimpleConfigLexer {
 
     private final String configText;
-    private final List<Token> tokens;
     private Integer index;
 
     public SimpleConfigLexer(String configText) {
         this.configText = configText;
         this.index = 0;
-        this.tokens = tokenize();
+
     }
 
-    public List<Token> getTokens() {
-        return tokens;
-    }
-
-    private List<Token> tokenize() {
+    public Object tokenize() {
         skipWhitespace();
 
-        Object result = parseValue(); 
+        Object result = parseValue();
+
+        if ( (result instanceof List)){
+            System.out.println("yessssss");
+        }
 
         System.out.println("result = " + result);
 
-        return tokens;
+        return result;
     }
 
     private Map<String, Object> parseObject() {
@@ -79,13 +78,17 @@ public class SimpleConfigLexer {
             return parseArray();
         }
 
+        if (current >= '0' && current < '9') {
+            return extractNumber();
+        }
+
         return null;
     }
 
     private List<Object> parseArray() {
 
         List<Object> list = new ArrayList<>();
-        index++; 
+        index++;
         skipWhitespace();
 
         while (index < configText.length() && configText.charAt(index) != ']') {
@@ -106,6 +109,18 @@ public class SimpleConfigLexer {
         return list;
     }
 
+    private String extractNumber() {
+
+        StringBuilder sb = new StringBuilder();
+
+        while (index < configText.length() && configText.charAt(index) != '"') {
+            sb.append(configText.charAt(index));
+            index++;
+        }
+
+        return sb.toString();
+    }
+
     private String extractString() {
 
         index++; // skip opening "
@@ -113,8 +128,12 @@ public class SimpleConfigLexer {
         StringBuilder sb = new StringBuilder();
 
         while (index < configText.length() && configText.charAt(index) != '"') {
+            if (configText.charAt(index) == '\\' && configText.charAt(index + 1) == '"') {
+                index++;
+            }
             sb.append(configText.charAt(index));
             index++;
+
         }
 
         index++; // skip closing "

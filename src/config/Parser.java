@@ -40,6 +40,6 @@ public class Parser {
             this.content = sb.toString();
         }
 
-        return new SimpleConfigLexer(this.content).getTokens();
+        return new SimpleConfigLexer(this.content).tokenize();
     }
 }

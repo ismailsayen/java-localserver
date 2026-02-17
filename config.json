@@ -1,8 +1,8 @@
 [
   {
     "host": ["localhost", "127.0.0.1"],
-    "port": ["8080", "8081"],
-    "name": "Server1",
+    "port": 8080,
+    "nam\"e": "Server1",
     "routes": [
       {
         "path": "/",
@@ -12,8 +12,8 @@
   },
   {
     "host": ["localhost", "127.0.0.1"],
-    "port": ["8080", "8081"],
-    "name": "Server2",
+    "port":  8081,
+    "nam\"e": "Server2",
     "routes": [
       {
         "path": "/",
