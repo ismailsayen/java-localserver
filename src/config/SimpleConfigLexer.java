@@ -32,8 +32,11 @@ public class SimpleConfigLexer {
         while (index < configText.length() && configText.charAt(index) != '}') {
 
             skipWhitespace();
-            String key = extractString();
+            if (configText.charAt(index) != '"') {
+                throw new FormatException("Expected \" before key");
+            }
 
+            String key = extractString();
             skipWhitespace();
             if (configText.charAt(index) != ':') {
                 throw new FormatException("Expected ':' after key");
@@ -41,27 +44,29 @@ public class SimpleConfigLexer {
             index++; // skip :
 
             skipWhitespace();
-            Object value = parseValue(); // valeur
+            Object value = parseValue();
 
             map.put(key, value);
 
             skipWhitespace();
-
+            if (configText.charAt(index) != ',' && configText.charAt(index) != '}') {
+                throw new FormatException("Expected ',' or '}'.");
+            }
             if (configText.charAt(index) == ',') {
                 index++;
             }
+
             skipWhitespace();
         }
-        if (configText.charAt(index) != '}') {
-            throw new FormatException("all Object need a close }");
-        }
-
 
         index++; // skip '}'
         return map;
     }
 
     private Object parseValue() throws FormatException {
+        if (index >= configText.length()) {
+            throw new FormatException("Unexpected end of input");
+        }
 
         char current = configText.charAt(index);
 
@@ -77,16 +82,15 @@ public class SimpleConfigLexer {
             return parseArray();
         }
 
-        if (current >= '0' && current <= '9') {
+        if (Character.isDigit(current) || current == '-') {
             return extractNumber();
         }
-
         if (current == 't' || current == 'f') {
             return parseBoolean();
         }
 
         if (current == 'n') {
-                return parseNull();
+            return parseNull();
         }
 
         throw new FormatException("Unexpected character: " + current);
@@ -105,7 +109,7 @@ public class SimpleConfigLexer {
             return false;
         }
 
-        throw new FormatException("Invalid boolean value at position " + index);
+        throw new FormatException("Invalid boolean value." + index);
 
     }
 
@@ -117,7 +121,7 @@ public class SimpleConfigLexer {
             return null;
         }
 
-        throw new FormatException("Invalid null value at position " + index);
+        throw new FormatException("Invalid null value." + index);
 
     }
 
@@ -134,6 +138,9 @@ public class SimpleConfigLexer {
 
             skipWhitespace();
 
+            if (configText.charAt(index) != ',' && configText.charAt(index) != ']') {
+                throw new FormatException("Expected ',' or ']'.");
+            }
             if (configText.charAt(index) == ',') {
                 index++;
             }
@@ -141,10 +148,6 @@ public class SimpleConfigLexer {
             skipWhitespace();
         }
         skipWhitespace();
-        if (configText.charAt(index) != ']') {
-            throw new FormatException("all Arrays need a close ]");
-        }
-
 
         index++; // skip ']'
         return list;
@@ -154,7 +157,10 @@ public class SimpleConfigLexer {
 
         StringBuilder sb = new StringBuilder();
 
-        while (index < configText.length() && configText.charAt(index) != '"') {
+        while (index < configText.length() && (Character.isDigit(configText.charAt(index)) ||
+                configText.charAt(index) == '.' || configText.charAt(index) == 'e' ||
+                configText.charAt(index) == 'E' || configText.charAt(index) == '+' ||
+                configText.charAt(index) == '-')) {
             sb.append(configText.charAt(index));
             index++;
         }
@@ -169,10 +175,9 @@ public class SimpleConfigLexer {
         StringBuilder sb = new StringBuilder();
 
         while (index < configText.length() && configText.charAt(index) != '"') {
-            System.out.println(sb.toString()+"---->"+index);
 
-            if (index + 1 < configText.length() && configText.charAt(index) == '\\' && configText.charAt(index + 1) == '"' ) {
-                System.out.println("te");
+            if (index + 1 < configText.length() && configText.charAt(index) == '\\'
+                    && configText.charAt(index + 1) == '"') {
                 index++;
 
             }
@@ -180,12 +185,13 @@ public class SimpleConfigLexer {
             sb.append(configText.charAt(index));
 
             index++;
-            System.out.println(sb.toString()+"==>"+index);
 
         }
+        if (index >= configText.length()) {
+            throw new FormatException("Unexpected end of input");
+        }
 
-        if (index >= configText.length() || configText.charAt(index) != '"'  ) {
-            System.out.println("yoooooooo");
+        if (configText.charAt(index) != '"') {
             throw new FormatException("all Strings need a close \"");
         }
 

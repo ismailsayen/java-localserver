@@ -2,12 +2,12 @@
   {
     "host": "localhost",
     "port": 8081,
-    "name": "Server2",
+    "name": "Server2"
     "routes": [
       {
         "path": "/",
         "methods": ["GET", "POST"]
-
+      }
     ]
   }
 ]

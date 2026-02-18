@@ -41,7 +41,9 @@ public class Parser {
             }
             this.content = sb.toString();
         }
-
+        if (content.length()==0){
+            throw new FormatException("empty file");
+        }
         return new SimpleConfigLexer(this.content).tokenize();
     }
 }
