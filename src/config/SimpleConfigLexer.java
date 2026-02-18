@@ -1,11 +1,10 @@
 package config;
 
+import customError.FormatException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import customError.FormatException;
 
 public class SimpleConfigLexer {
 
@@ -20,11 +19,7 @@ public class SimpleConfigLexer {
 
     public Object tokenize() throws FormatException {
         skipWhitespace();
-
         Object result = parseValue();
-
-        System.out.println("result = " + result);
-
         return result;
     }
 
@@ -55,12 +50,13 @@ public class SimpleConfigLexer {
             if (configText.charAt(index) == ',') {
                 index++;
             }
-
             skipWhitespace();
         }
         if (configText.charAt(index) != '}') {
             throw new FormatException("all Object need a close }");
         }
+
+
         index++; // skip '}'
         return map;
     }
@@ -144,9 +140,12 @@ public class SimpleConfigLexer {
 
             skipWhitespace();
         }
+        skipWhitespace();
         if (configText.charAt(index) != ']') {
             throw new FormatException("all Arrays need a close ]");
         }
+
+
         index++; // skip ']'
         return list;
     }
@@ -170,16 +169,26 @@ public class SimpleConfigLexer {
         StringBuilder sb = new StringBuilder();
 
         while (index < configText.length() && configText.charAt(index) != '"') {
-            if (configText.charAt(index) == '\\' && configText.charAt(index + 1) == '"') {
+            System.out.println(sb.toString()+"---->"+index);
+
+            if (index + 1 < configText.length() && configText.charAt(index) == '\\' && configText.charAt(index + 1) == '"' ) {
+                System.out.println("te");
                 index++;
+
             }
+
             sb.append(configText.charAt(index));
+
             index++;
+            System.out.println(sb.toString()+"==>"+index);
 
         }
-        if (configText.charAt(index) != '"') {
+
+        if (index >= configText.length() || configText.charAt(index) != '"'  ) {
+            System.out.println("yoooooooo");
             throw new FormatException("all Strings need a close \"");
         }
+
         index++; // skip closing "
         return sb.toString();
     }

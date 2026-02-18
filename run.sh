@@ -1,1 +1,1 @@
-javac -d build src/**/*.java && java -cp build Main
+javac -d out src/**/*.java && java -cp out Main 
