@@ -1,8 +1,19 @@
 [
   {
-    "host": "localhost",
+    "host": "127.0.0.1",
+    "name": "localhost",
     "port": 8081,
-    "name": "Server2"
+    "routes": [
+      {
+        "path": "/",
+        "methods": ["GET", "POST"]
+      }
+    ]
+  },
+   {
+    "host": "127.0.0.1",
+    "port": 8081,
+    "name": "Server2",
     "routes": [
       {
         "path": "/",

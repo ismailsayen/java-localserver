@@ -1,9 +1,8 @@
 package config;
 
 import customError.FormatException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 
 public class SimpleConfigLexer {
@@ -20,6 +19,9 @@ public class SimpleConfigLexer {
     public Object tokenize() throws FormatException {
         skipWhitespace();
         Object result = parseValue();
+        if (!(result instanceof LinkedHashSet)) {
+            throw new FormatException("Expected Array of Object");
+        }
         return result;
     }
 
@@ -125,9 +127,9 @@ public class SimpleConfigLexer {
 
     }
 
-    private List<Object> parseArray() throws FormatException {
+    private Object parseArray() throws FormatException {
 
-        List<Object> list = new ArrayList<>();
+        LinkedHashSet<Object> list = new LinkedHashSet<>();
         index++;
         skipWhitespace();
 
