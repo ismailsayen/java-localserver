@@ -23,18 +23,7 @@ public class WebServerConfig {
             Map<String, Object> ser = (Map<String, Object>) elem;
             String host = (String) ser.get("host");
             String name = (String) ser.get("name");
-            Object portObj = ser.get("port");
-            Integer port = null;
-
-            if (portObj instanceof Integer) {
-                port = (Integer) portObj;
-            } else if (portObj instanceof Double aDouble) {
-                port = aDouble.intValue();
-            } else if (portObj instanceof String string) {
-                port = Integer.valueOf(string);
-            } else {
-                throw new RuntimeException("Invalid port type: " + portObj);
-            }
+             LinkedHashSet<Object> port = ( LinkedHashSet<Object>) ser.get("port");
 
             LinkedHashSet<Object> routesRaw = (LinkedHashSet<Object>) ser.get("routes");
             List<Route> routes = extractRoutes(routesRaw);
@@ -67,8 +56,14 @@ public class WebServerConfig {
             Route route = new Route(path, methods);
             routeList.add(route);
         }
-
         return routeList;
     }
 
+    private List<Route> extractCustomRoutes(LinkedHashSet<Object> routes) {
+
+        List<Route> routeList = new ArrayList<>();
+
+        
+        return routeList;
+    }
 }

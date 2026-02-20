@@ -155,7 +155,7 @@ public class SimpleConfigLexer {
         return list;
     }
 
-    private String extractNumber() {
+    private Long extractNumber() throws FormatException {
 
         StringBuilder sb = new StringBuilder();
 
@@ -166,8 +166,12 @@ public class SimpleConfigLexer {
             sb.append(configText.charAt(index));
             index++;
         }
-
-        return sb.toString();
+        try {
+            
+            return Long.valueOf(sb.toString());
+        } catch (NumberFormatException e) {
+            throw new FormatException("Invalid Integer value");
+        }
     }
 
     private String extractString() throws FormatException {

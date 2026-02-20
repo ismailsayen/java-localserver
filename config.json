@@ -2,18 +2,34 @@
   {
     "host": "127.0.0.1",
     "name": "localhost",
-    "port": 8081,
+    "port": [8081],
+    "defaultServer": true,
+    "limitRequestBody": 585525212454,
+    "errorPages": {
+      "404": "/error/404.html",
+      "500": "/error/500.html"
+    },
     "routes": [
       {
         "path": "/",
-        "methods": ["GET", "POST"]
+        "methods": ["GET"],
+        "root": "./www/html",
+        "index": "index.html"
+      },
+      {
+        "path": "/images",
+        "root": "./www/html",
+        "methods": ["GET"],
+        "directoryListing": true
       }
     ]
   },
-   {
+  {
     "host": "127.0.0.1",
-    "port": 8081,
+    "port": [8081],
     "name": "Server2",
+    "limitSize": 585525212454,
+    "defaultServer": true,
     "routes": [
       {
         "path": "/",
