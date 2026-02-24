@@ -2,7 +2,7 @@
   {
     "host": "127.0.0.1",
     "name": "localhost",
-    "port": [8081],
+    "port": [8080,1021],
     "defaultServer": true,
     "limitRequestBody": 585525212454,
     "errorPages": {
@@ -27,7 +27,7 @@
   {
     "host": "127.0.0.1",
     "port": [8081],
-    "name": "Server2",
+    "name": "localhost",
     "limitSize": 585525212454,
     "defaultServer": true,
     "routes": [

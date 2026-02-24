@@ -1,10 +1,10 @@
 package config.model;
 
+import config.utils.Validators;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import server.Route;
 import server.Server;
 
 public class WebServerConfig {
@@ -21,49 +21,56 @@ public class WebServerConfig {
         List<Server> serversList = new ArrayList<>();
         for (Object elem : this.servers) {
             Map<String, Object> ser = (Map<String, Object>) elem;
-            String host = (String) ser.get("host");
+            Server server = Validators.ServerValidator(ser);
+            if (server == null) {
+                System.out.println("khritiha hna =>\n" + ser);
+                continue;
+            }
+
             String name = (String) ser.get("name");
-             LinkedHashSet<Object> port = ( LinkedHashSet<Object>) ser.get("port");
+            int counter = 1;
 
-            LinkedHashSet<Object> routesRaw = (LinkedHashSet<Object>) ser.get("routes");
-            List<Route> routes = extractRoutes(routesRaw);
+            for (Server s : serversList) {
+                if (s.getName().trim().equals(name.trim())) {
+                    counter++;
+                    name = String.format("%s_%d", name, counter);
+                    break;
+                }
+            }
 
-            // defaultServer n'existe pas dans ton JSON
-            Server server = new Server(host, port, null, name, routes);
-
+            server.setName(name);
             serversList.add(server);
         }
         return serversList;
     }
 
-    private List<Route> extractRoutes(LinkedHashSet<Object> routes) {
+    // private List<Route> extractRoutes(LinkedHashSet<Object> routes) {
 
-        List<Route> routeList = new ArrayList<>();
+    // List<Route> routeList = new ArrayList<>();
 
-        for (Object elem : routes) {
+    // for (Object elem : routes) {
 
-            Map<String, Object> rt = (Map<String, Object>) elem;
+    // Map<String, Object> rt = (Map<String, Object>) elem;
 
-            String path = (String) rt.get("path");
+    // String path = (String) rt.get("path");
 
-            LinkedHashSet<Object> methodsRaw = (LinkedHashSet<Object>) rt.get("methods");
+    // LinkedHashSet<Object> methodsRaw = (LinkedHashSet<Object>) rt.get("methods");
 
-            List<String> methods = new ArrayList<>();
-            for (Object method : methodsRaw) {
-                methods.add((String) method);
-            }
+    // List<String> methods = new ArrayList<>();
+    // for (Object method : methodsRaw) {
+    // methods.add((String) method);
+    // }
 
-            Route route = new Route(path, methods);
-            routeList.add(route);
-        }
-        return routeList;
-    }
+    // // Route route = new Route(path, methods);
+    // // routeList.add(route);
+    // }
+    // return routeList;
+    // }
 
-    private List<Route> extractCustomRoutes(LinkedHashSet<Object> routes) {
+    // private List<Route> extractCustomRoutes(LinkedHashSet<Object> routes) {
 
-        List<Route> routeList = new ArrayList<>();
+    // List<Route> routeList = new ArrayList<>();
 
-        
-        return routeList;
-    }
+    // return routeList;
+    // }
 }

@@ -2,24 +2,17 @@ package server;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 public class Server {
     private String host;
     private LinkedHashSet<Object> port;
-    private String defaultServer;
+    private Boolean defaultServer;
     private String name;
     private List<Route> routes;
     private Long limitRequestBody;
+    private Map<String,String> errorPages;
 
-    public Server(String host, LinkedHashSet<Object> port, String defaultServer, String name, List<Route> routes,
-            Long limitRequestBody) {
-        this.host = host;
-        this.port = port;
-        this.defaultServer = defaultServer;
-        this.name = name;
-        this.routes = routes;
-        this.limitRequestBody = limitRequestBody;
-    }
 
     public String getHost() {
         return host;
@@ -37,11 +30,11 @@ public class Server {
         this.port = port;
     }
 
-    public String getDefaultServer() {
+    public Boolean getDefaultServer() {
         return defaultServer;
     }
 
-    public void setDefaultServer(String defaultServer) {
+    public void setDefaultServer(Boolean defaultServer) {
         this.defaultServer = defaultServer;
     }
 
@@ -68,5 +61,26 @@ public class Server {
     public void setRoutes(List<Route> routes) {
         this.routes = routes;
     }
+
+    public Map<String,String> getErrorPages() {
+        return errorPages;
+    }
+
+    public void setErrorPages(Map<String,String> errorPages) {
+        this.errorPages = errorPages;
+    }
+
+    @Override
+public String toString() {
+    return "Server {\n" +
+            "  name='" + name + '\'' + ",\n" +
+            "  host='" + host + '\'' + ",\n" +
+            "  ports=" + port + ",\n" +
+            "  defaultServer=" + defaultServer + ",\n" +
+            "  limitRequestBody=" + limitRequestBody + ",\n" +
+            "  routes=" + routes + ",\n" +
+            "  errorPages=" + errorPages + "\n" +
+            '}';
+}
 
 }

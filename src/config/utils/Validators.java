@@ -1,0 +1,78 @@
+package config.utils;
+
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import server.Server;
+
+public class Validators {
+    private static final Long BodySize = 20000000L;
+
+    public static Server ServerValidator(Map<String, Object> ser) {
+
+        Server server = new Server();
+
+        // host
+        if (!(ser.get("host") instanceof String)) {
+            return null;
+        }
+
+        String host = (String) ser.get("host");
+
+        Pattern pattern = Pattern.compile(
+                "^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$");
+
+        if (!pattern.matcher(host).matches()) {
+            return null;
+        }
+
+        server.setHost(host);
+
+        // port
+        if (!(ser.get("port") instanceof LinkedHashSet<?>)) {
+            return null;
+        }
+
+        LinkedHashSet<Object> ports = (LinkedHashSet<Object>) ser.get("port");
+
+        Iterator<Object> it = ports.iterator();
+        while (it.hasNext()) {
+            Object obj = it.next();
+
+            if (!(obj instanceof Long)) {
+                return null;
+            }
+
+            Long p = (Long) obj;
+            if (p < 1024 || p > 65535) {
+                it.remove();
+            }
+        }
+
+        if (ports.isEmpty()) {
+            return null;
+        }
+
+        server.setPort(ports);
+
+        // name
+        if (!(ser.get("name") instanceof String)) {
+            return null;
+        }
+
+        server.setName((String) ser.get("name"));
+
+        // defaultServer
+        server.setDefaultServer(
+                (Boolean) ser.getOrDefault("defaultServer", false));
+
+        // limitRequestBody
+        server.setLimitRequestBody(
+                (Long) ser.getOrDefault("limitRequestBody", BodySize));
+
+        return server;
+    }
+
+}

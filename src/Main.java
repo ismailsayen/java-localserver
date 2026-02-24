@@ -11,8 +11,8 @@ public class Main {
         System.out.println("Config file parsing...");
         List<Server> ser=new WebServerConfig((LinkedHashSet<Object>)config).setup();
     
-        for (Server elem : ser) {
-            System.out.println(elem.getName());
-        }
+            for (Server elem : ser) {
+                System.out.println(elem);
+            }
     }
 }
