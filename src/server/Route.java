@@ -1,5 +1,8 @@
 package server;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -33,8 +36,17 @@ public class Route {
         return methods;
     }
 
-    public void setMethods(List<String> methods) {
-        this.methods = methods;
+    public void setMethods(LinkedHashSet<String> methods) {
+        String[] allowedMethods = { "GET", "POST", "DELETE" };
+        List<String> newList = new ArrayList<>();
+
+        for (String method : methods) {
+            if (Arrays.asList(allowedMethods).contains(method)) {
+                newList.add(method);
+            }
+        }
+
+        this.methods = newList;
     }
 
     public String getIndex() {
@@ -76,4 +88,20 @@ public class Route {
     public void setCgi(Map<String, String> cgi) {
         this.cgi = cgi;
     }
+
+    @Override
+    public String toString() {
+        return """
+               Route {
+                 path='""" + path + '\'' +
+                ",\n  root='" + root + '\'' +
+                ",\n  methods=" + methods +
+                ",\n  index='" + index + '\'' +
+                ",\n  directoryListing=" + directoryListing +
+                ",\n  redirectTo='" + redirectTo + '\'' +
+                ",\n  redirectStatusCode=" + redirectStatusCode +
+                ",\n  cgi=" + cgi +
+                "\n}";
+    }
+
 }

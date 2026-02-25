@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import server.Route;
 import server.Server;
 
 public class WebServerConfig {
@@ -14,14 +15,14 @@ public class WebServerConfig {
         this.servers = servers;
     }
 
-    // [{path=/, methods=[GET, POST]}], port=8080, host=127.0.0.1, name=server1,
-    // default_server=true}]
     public List<Server> setup() {
 
         List<Server> serversList = new ArrayList<>();
         for (Object elem : this.servers) {
             Map<String, Object> ser = (Map<String, Object>) elem;
+
             Server server = Validators.ServerValidator(ser);
+
             if (server == null) {
                 System.out.println("khritiha hna =>\n" + ser);
                 continue;
@@ -39,38 +40,32 @@ public class WebServerConfig {
             }
 
             server.setName(name);
+
+            LinkedHashSet<Object> routes = (LinkedHashSet<Object>) ser.get("routes");
+            List<Route> extractedRoutes = extractRoutes(routes);
+            server.setRoutes(extractedRoutes);
             serversList.add(server);
         }
         return serversList;
     }
 
-    // private List<Route> extractRoutes(LinkedHashSet<Object> routes) {
+    private List<Route> extractRoutes(LinkedHashSet<Object> routes) {
 
-    // List<Route> routeList = new ArrayList<>();
+        List<Route> routeList = new ArrayList<>();
 
-    // for (Object elem : routes) {
+        for (Object elem : routes) {
 
-    // Map<String, Object> rt = (Map<String, Object>) elem;
+            Map<String, Object> rt = (Map<String, Object>) elem;
 
-    // String path = (String) rt.get("path");
+            Route route = Validators.routeValidator(rt);
+            if (route == null) {
+                System.out.println("khritiha f had route =>\n" + route);
+                continue;
+            }
+            routeList.add(route);
 
-    // LinkedHashSet<Object> methodsRaw = (LinkedHashSet<Object>) rt.get("methods");
+        }
+        return routeList;
+    }
 
-    // List<String> methods = new ArrayList<>();
-    // for (Object method : methodsRaw) {
-    // methods.add((String) method);
-    // }
-
-    // // Route route = new Route(path, methods);
-    // // routeList.add(route);
-    // }
-    // return routeList;
-    // }
-
-    // private List<Route> extractCustomRoutes(LinkedHashSet<Object> routes) {
-
-    // List<Route> routeList = new ArrayList<>();
-
-    // return routeList;
-    // }
 }

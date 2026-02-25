@@ -2,9 +2,11 @@ package config.utils;
 
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import server.Route;
 import server.Server;
 
 public class Validators {
@@ -73,6 +75,59 @@ public class Validators {
                 (Long) ser.getOrDefault("limitRequestBody", BodySize));
 
         return server;
+    }
+
+    public static Route routeValidator(Map<String, Object> rt) {
+        Route route = new Route();
+
+        // ===== path (obligatoire) =====
+        if (rt.get("path") != null) {
+            route.setPath((String) rt.get("path"));
+        }
+
+        // ===== root =====
+        if (rt.get("root") != null) {
+
+            route.setRoot((String) rt.get("root"));
+        }
+
+        // ===== methods =====
+        if (rt.get("methods") != null) {
+            route.setMethods((LinkedHashSet<String>) rt.get("methods"));
+
+        }
+
+        // ===== index =====
+        if (rt.get("index") != null) {
+
+            route.setIndex((String) rt.get("index"));
+        }
+
+        // ===== directoryListing =====
+        if (rt.get("directoryListing") != null) {
+
+            route.setDirectoryListing((Boolean) rt.get("directoryListing"));
+        }
+
+        // ===== redirectTo =====
+        if (rt.get("redirectTo") != null) {
+
+            route.setRedirectTo((String) rt.get("redirectTo"));
+        }
+
+        // ===== redirectStatusCode =====
+        if (rt.get("redirectStatusCode") != null) {
+
+            route.setRedirectStatusCode((Integer) rt.get("redirectStatusCode"));
+        }
+
+        // ===== cgi =====
+        if (rt.get("cgi") != null) {
+
+            route.setCgi((Map<String, String>) rt.get("cgi"));
+        }
+
+        return route;
     }
 
 }
