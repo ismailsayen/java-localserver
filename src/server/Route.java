@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 
 public class Route {
     private String path; // route path (/ , /images)
@@ -14,7 +13,7 @@ public class Route {
     private Boolean directoryListing; // enable/disable directory listing
     private String redirectTo; // redirection target
     private Integer redirectStatusCode; // redirection status code
-    private Map<String, String> cgi; // CGI by file extension
+    private String cgiExtension; // CGI by file extension
 
     public String getPath() {
         return path;
@@ -81,26 +80,26 @@ public class Route {
         this.redirectStatusCode = redirectStatusCode;
     }
 
-    public Map<String, String> getCgi() {
-        return cgi;
+    public String getCgi() {
+        return cgiExtension;
     }
 
-    public void setCgi(Map<String, String> cgi) {
-        this.cgi = cgi;
+    public void setCgi(String cgi) {
+        this.cgiExtension = cgi;
     }
 
     @Override
     public String toString() {
         return """
-               Route {
-                 path='""" + path + '\'' +
+                Route {
+                  path='""" + path + '\'' +
                 ",\n  root='" + root + '\'' +
                 ",\n  methods=" + methods +
                 ",\n  index='" + index + '\'' +
                 ",\n  directoryListing=" + directoryListing +
                 ",\n  redirectTo='" + redirectTo + '\'' +
                 ",\n  redirectStatusCode=" + redirectStatusCode +
-                ",\n  cgi=" + cgi +
+                ",\n  cgiExtension=" + cgiExtension +
                 "\n}";
     }
 

@@ -72,8 +72,9 @@ public class Server {
 
     @Override
 public String toString() {
-    return "Server {\n" +
-            "  name='" + name + '\'' + ",\n" +
+    return """
+           Server {
+             name='""" + name + '\'' + ",\n" +
             "  host='" + host + '\'' + ",\n" +
             "  ports=" + port + ",\n" +
             "  defaultServer=" + defaultServer + ",\n" +

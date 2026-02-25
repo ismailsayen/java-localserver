@@ -1,39 +1,22 @@
 [
   {
+    "name": "primary.local",
     "host": "127.0.0.1",
-    "name": "localhost",
-    "port": [8080,1021],
+    "port": [8080],
     "defaultServer": true,
-    "limitRequestBody": 585525212454,
-    "errorPages": {
-      "404": "/error/404.html",
-      "500": "/error/500.html"
-    },
+    "limitSize": 1024,
     "routes": [
       {
         "path": "/",
+        "root": "./www/html/primary",
         "methods": ["GET"],
-        "root": "./www/html",
         "index": "index.html"
       },
       {
-        "path": "/images",
-        "root": "./www/html",
-        "methods": ["GET"],
-        "directoryListing": true
-      }
-    ]
-  },
-  {
-    "host": "127.0.0.1",
-    "port": [8081],
-    "name": "localhost",
-    "limitSize": 585525212454,
-    "defaultServer": true,
-    "routes": [
-      {
-        "path": "/",
-        "methods": ["GET", "POST"]
+        "path": "/cgi-bin",
+        "root": "./www/scripts",
+        "methods": ["GET", "POST"],
+        "cgiExtension": ".py"
       }
     ]
   }

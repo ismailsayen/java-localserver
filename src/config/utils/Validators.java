@@ -2,10 +2,8 @@ package config.utils;
 
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-
 import server.Route;
 import server.Server;
 
@@ -74,6 +72,10 @@ public class Validators {
         server.setLimitRequestBody(
                 (Long) ser.getOrDefault("limitRequestBody", BodySize));
 
+        // errorPages
+        if (ser.get("errorPages") instanceof Map) {
+            server.setErrorPages((Map<String, String>) ser.get("errorPages"));
+        }
         return server;
     }
 
@@ -122,9 +124,9 @@ public class Validators {
         }
 
         // ===== cgi =====
-        if (rt.get("cgi") != null) {
+        if (rt.get("cgiExtension") != null) {
 
-            route.setCgi((Map<String, String>) rt.get("cgi"));
+            route.setCgi((String) rt.get("cgiExtension"));
         }
 
         return route;
