@@ -5,8 +5,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import server.Route;
-import server.Server;
+
+import DTO.Route;
+import DTO.Server;
 
 public class WebServerConfig {
     private final LinkedHashSet<Object> servers;
@@ -28,16 +29,19 @@ public class WebServerConfig {
                 continue;
             }
 
-            String name = (String) ser.get("name");
+            String name = (String) ser.getOrDefault("name", "default");
             int counter = 1;
 
             for (Server s : serversList) {
                 if (s.getName().trim().equals(name.trim())) {
-                    counter++;
-                    name = String.format("%s_%d", name, counter);
-                    break;
+                     name = String.format("%s_%d", name, counter);
+                    //  System.out.println(s.getName()+"  "+name);
+                     counter++;
                 }
             }
+            System.out.println("====================================");
+            System.out.println(name);
+            System.out.println("+++++++++++++++++++++++++++++++++++");
 
             server.setName(name);
 

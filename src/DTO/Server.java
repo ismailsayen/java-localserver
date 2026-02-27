@@ -1,4 +1,4 @@
-package server;
+package DTO;
 
 import java.util.LinkedHashSet;
 import java.util.List;

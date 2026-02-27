@@ -4,11 +4,11 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.regex.Pattern;
-import server.Route;
-import server.Server;
+
+import DTO.Route;
+import DTO.Server;
 
 public class Validators {
-    private static final Long BodySize = 20000000L;
 
     public static Server ServerValidator(Map<String, Object> ser) {
 
@@ -58,7 +58,7 @@ public class Validators {
         server.setPort(ports);
 
         // name
-        if (!(ser.get("name") instanceof String)) {
+        if (ser.get("name") != null && !(ser.get("name") instanceof String)) {
             return null;
         }
 
@@ -70,7 +70,7 @@ public class Validators {
 
         // limitRequestBody
         server.setLimitRequestBody(
-                (Long) ser.getOrDefault("limitRequestBody", BodySize));
+                (Long) ser.getOrDefault("limitRequestBody", 20000000L));
 
         // errorPages
         if (ser.get("errorPages") instanceof Map) {
