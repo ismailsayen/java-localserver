@@ -34,14 +34,10 @@ public class WebServerConfig {
 
             for (Server s : serversList) {
                 if (s.getName().trim().equals(name.trim())) {
-                     name = String.format("%s_%d", name, counter);
-                    //  System.out.println(s.getName()+"  "+name);
-                     counter++;
+                    name = String.format("%s_%d", name.trim(), counter);
+                    counter++;
                 }
             }
-            System.out.println("====================================");
-            System.out.println(name);
-            System.out.println("+++++++++++++++++++++++++++++++++++");
 
             server.setName(name);
 
