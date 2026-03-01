@@ -1,19 +1,24 @@
-package NioServer;
+package Nio;
 
 import DTO.Server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class NioServer {
+    private Selector selector;
+
     public void start(List<Server> serverConfig) throws IOException {
-        Selector selector = Selector.open();
+
+        selector = Selector.open();
 
         Map<String, List<Server>> BindData = new HashMap<>();
         for (Server config : serverConfig) {
@@ -39,24 +44,36 @@ public class NioServer {
         while (true) {
 
             selector.select();
-            System.out.println("ss");
             for (var key : selector.selectedKeys()) {
                 if (key.isAcceptable()) {
                     if (key.channel() instanceof ServerSocketChannel channel) {
-                        var client = channel.accept();
-                        var socket = client.socket();
-                        System.out.println("acceptable" + socket.getRemoteSocketAddress());
-                        client.configureBlocking(false);
-                        // client.register(selector, SelectionKey.OP_READ);
+                        List<Server> virtualHost = (List<Server>) key.attachment();
+                        handleAccept(channel, virtualHost);
                     }
                 } else if (key.isReadable()) {
-                    System.out.println("readable");
+                    if (key.channel() instanceof SocketChannel client) {
+                        System.out.println(key.attachment());
+                        ByteBuffer buffer = ByteBuffer.allocate(1024);
+                        int bytesRead = client.read(buffer);
+                        if (bytesRead == -1) {
+                            client.close();
+                            break;
+                        }
+                        buffer.flip();
+                        String request = new String(buffer.array(), buffer.position(), bytesRead);
+                        System.out.println(request);
+                    }
                 } else {
                     System.out.println("ikhan");
                 }
             }
             selector.selectedKeys().clear();
         }
+    }
 
+    private void handleAccept(ServerSocketChannel channel, List<Server> virtualHost) throws IOException {
+        var client = channel.accept();
+        client.configureBlocking(false);
+        client.register(selector, SelectionKey.OP_READ, virtualHost);
     }
 }
