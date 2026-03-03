@@ -19,47 +19,5 @@
         "cgiExtension": ".py"
       }
     ]
-  },
-  {
-    "name": "primary.local",
-    "host": "127.0.0.2",
-    "port": [8080,8081],
-    "defaultServer": true,
-    "limitSize": 1024,
-    "routes": [
-      {
-        "path": "/",
-        "root": "./www/html/primary",
-        "methods": ["GET"],
-        "index": "index.html"
-      },
-      {
-        "path": "/cgi-bin",
-        "root": "./www/scripts",
-        "methods": ["GET", "POST"],
-        "cgiExtension": ".py"
-      }
-    ]
-  },
-  {
-    "name": "primary.local",
-    "host": "127.0.0.3",
-    "port": [8083,8070],
-    "defaultServer": true,
-    "limitSize": 1024,
-    "routes": [
-      {
-        "path": "/",
-        "root": "./www/html/primary",
-        "methods": ["GET"],
-        "index": "index.html"
-      },
-      {
-        "path": "/cgi-bin",
-        "root": "./www/scripts",
-        "methods": ["GET", "POST"],
-        "cgiExtension": ".py"
-      }
-    ]
   }
 ]

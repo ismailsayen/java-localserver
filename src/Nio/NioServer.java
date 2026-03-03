@@ -47,12 +47,11 @@ public class NioServer {
             for (var key : selector.selectedKeys()) {
                 if (key.isAcceptable()) {
                     if (key.channel() instanceof ServerSocketChannel channel) {
-                        List<Server> virtualHost = (List<Server>) key.attachment();
+                        List<Server > virtualHost = (List<Server>) key.attachment();
                         handleAccept(channel, virtualHost);
                     }
                 } else if (key.isReadable()) {
                     if (key.channel() instanceof SocketChannel client) {
-                        System.out.println(key.attachment());
                         ByteBuffer buffer = ByteBuffer.allocate(1024);
                         int bytesRead = client.read(buffer);
                         if (bytesRead == -1) {
@@ -61,7 +60,12 @@ public class NioServer {
                         }
                         buffer.flip();
                         String request = new String(buffer.array(), buffer.position(), bytesRead);
+                        String[] req = request.split("\r\n\r\n");
                         System.out.println(request);
+                        for(String line:req){
+                            // String[] l =line.split(":");
+                            System.out.println("====>"+line);
+                        }
                     }
                 } else {
                     System.out.println("ikhan");
