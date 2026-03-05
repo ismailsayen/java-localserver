@@ -1,48 +1,60 @@
 package Nio;
 
 import DTO.Server;
-import http.httpParser;
+import http.HttpHeader;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.List;
 
 public class ClientHandler {
     private SocketChannel client;
-    private List<Server> virtualHosts;
+    private Server virtualHosts;
     private Long lastActivity;
-    private httpParser http;
+    private ByteArrayOutputStream byteArrayOutputStream;
+    private Boolean headersFounded;
+    private ByteBuffer bufferReader;    
 
-    public ClientHandler(SocketChannel client, List<Server> virtualHosts) {
+    public ClientHandler(SocketChannel client, Server virtualHosts) {
         this.client = client;
         this.virtualHosts = virtualHosts;
+        this.headersFounded = false;
+        this.bufferReader = ByteBuffer.allocate(2048);
+        this.byteArrayOutputStream = new ByteArrayOutputStream();
     }
 
     public void read() throws IOException {
         this.lastActivity = System.currentTimeMillis();
-        if (this.http == null) {
-            System.out.println("khawya");
-        } else {
-            ByteBuffer buffer = ByteBuffer.allocate(1024);
-            int bytesRead = this.client.read(buffer);
-            if (bytesRead == -1) {
-                this.client.close();
-                return;
-            }
-            buffer.flip();
-            String request = new String(buffer.array(), buffer.position(), bytesRead);
-            String[] req = request.split("\r\n\r\n");
-            // // System.out.println(request);
-            // //
-            //
-            System.out.println(
-                    "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-            // String[] sub = Arrays.copyOfRange(req, 0, 1);
+        int bytesRead = this.client.read(bufferReader);
+        if (bytesRead == -1) {
+            this.client.close();
+            return;
+        }
 
-            for (String line : req) {
-                // String[] l =line.split(":");
-                System.out.println("====>" + line);
+        bufferReader.flip();
+        byte[] data = new byte[bufferReader.remaining()];
+        bufferReader.get(data);
+        this.byteArrayOutputStream.write(data);
+        bufferReader.clear();
+        if (!headersFounded) {
+            byte[] fullData = byteArrayOutputStream.toByteArray();
+            String req = new String(fullData);
+            int index = req.indexOf("\r\n\r\n");
+            if (index != -1) {
+                HttpHeader headerHttp = new HttpHeader().parseHeaders(req.substring(0,
+                        index));
+                headersFounded = true;
+                int bodyStart = index + 4;
+                int bodyTotal = fullData.length - bodyStart;
+                byteArrayOutputStream.reset();
+                byteArrayOutputStream.write(data, bodyStart, bodyTotal);
+                // System.out.println("Headers terminés. Body actuel : " + byteArrayOutputStream.size() + " octets");
+                System.out.println(headerHttp.getHeaders());
             }
+        } else {
+            // Gestion du body simple pour l'instant
+            System.out.println("Lecture du body... Taille totale : " + new String(byteArrayOutputStream.toByteArray()));
         }
     }
 
@@ -54,11 +66,11 @@ public class ClientHandler {
         this.client = client;
     }
 
-    public List<Server> getVirtualHosts() {
+    public Server getVirtualHosts() {
         return virtualHosts;
     }
 
-    public void setVirtualHosts(List<Server> virtualHosts) {
+    public void setVirtualHosts(Server virtualHosts) {
         this.virtualHosts = virtualHosts;
     }
 
@@ -70,11 +82,19 @@ public class ClientHandler {
         this.lastActivity = lastActivity;
     }
 
-    public httpParser getHttp() {
-        return http;
+    public ByteBuffer getBuffer() {
+        return bufferReader;
     }
 
-    public void setHttp(httpParser http) {
-        this.http = http;
+    public void setBuffer(ByteBuffer bufferReader) {
+        this.bufferReader = bufferReader;
+    }
+
+    public ByteArrayOutputStream getByteArrayOutputStream() {
+        return byteArrayOutputStream;
+    }
+
+    public void setByteArrayOutputStream(ByteArrayOutputStream byteArrayOutputStream) {
+        this.byteArrayOutputStream = byteArrayOutputStream;
     }
 }

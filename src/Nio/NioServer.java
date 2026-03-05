@@ -7,7 +7,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,16 +19,16 @@ public class NioServer {
 
         selector = Selector.open();
 
-        Map<String, List<Server>> BindData = new HashMap<>();
+        Map<String, Server> BindData = new HashMap<>();
         for (Server config : serverConfig) {
             String host = config.getHost();
             for (Object port : config.getPort()) {
                 String dns = host + ":" + port;
-                BindData.computeIfAbsent(dns, k -> new ArrayList<>()).add(config);
+                BindData.put(dns, config);
             }
         }
 
-        for (Map.Entry<String, List<Server>> serv : BindData.entrySet()) {
+        for (Map.Entry<String, Server> serv : BindData.entrySet()) {
             String dns = serv.getKey();
             String[] parts = dns.split(":");
             String host = parts[0];
@@ -47,7 +46,7 @@ public class NioServer {
             for (var key : selector.selectedKeys()) {
                 if (key.isAcceptable()) {
                     if (key.channel() instanceof ServerSocketChannel channel) {
-                        List<Server> virtualHost = (List<Server>) key.attachment();
+                        Server virtualHost = (Server) key.attachment();
                         handleAccept(channel, virtualHost);
                     }
                 } else if (key.isReadable()) {
@@ -55,21 +54,22 @@ public class NioServer {
                         // ByteBuffer buffer = ByteBuffer.allocate(1024);
                         // int bytesRead = client.read(buffer);
                         // if (bytesRead == -1) {
-                        //     client.close();
-                        //     break;
+                        // client.close();
+                        // break;
                         // }
                         // buffer.flip();
                         // String request = new String(buffer.array(), buffer.position(), bytesRead);
                         // String[] req = request.split("\r\n\r\n");
                         // // // System.out.println(request);
                         // // //
-                        // // System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                        // //
+                        // System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
                         // // String[] sub = Arrays.copyOfRange(req, 0, 1);
 
                         // for (String line : req) {
-                        //     // String[] l =line.split(":");
-                        //     System.out.println(count + "====>" + line);
-                        //     count++;
+                        // // String[] l =line.split(":");
+                        // System.out.println(count + "====>" + line);
+                        // count++;
                         // }
                         handleRead(key);
                     }
@@ -81,7 +81,7 @@ public class NioServer {
         }
     }
 
-    private void handleAccept(ServerSocketChannel channel, List<Server> virtualHost) throws IOException {
+    private void handleAccept(ServerSocketChannel channel, Server virtualHost) throws IOException {
         SocketChannel client = channel.accept();
         client.configureBlocking(false);
         SelectionKey key = client.register(selector, SelectionKey.OP_READ);
