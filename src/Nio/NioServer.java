@@ -3,7 +3,6 @@ package Nio;
 import DTO.Server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -15,6 +14,7 @@ import java.util.Map;
 
 public class NioServer {
     private Selector selector;
+    public Integer count = 1;
 
     public void start(List<Server> serverConfig) throws IOException {
 
@@ -47,25 +47,31 @@ public class NioServer {
             for (var key : selector.selectedKeys()) {
                 if (key.isAcceptable()) {
                     if (key.channel() instanceof ServerSocketChannel channel) {
-                        List<Server > virtualHost = (List<Server>) key.attachment();
+                        List<Server> virtualHost = (List<Server>) key.attachment();
                         handleAccept(channel, virtualHost);
                     }
                 } else if (key.isReadable()) {
-                    if (key.channel() instanceof SocketChannel client) {
-                        ByteBuffer buffer = ByteBuffer.allocate(1024);
-                        int bytesRead = client.read(buffer);
-                        if (bytesRead == -1) {
-                            client.close();
-                            break;
-                        }
-                        buffer.flip();
-                        String request = new String(buffer.array(), buffer.position(), bytesRead);
-                        String[] req = request.split("\r\n\r\n");
-                        System.out.println(request);
-                        for(String line:req){
-                            // String[] l =line.split(":");
-                            System.out.println("====>"+line);
-                        }
+                    if (key.channel() instanceof SocketChannel) {
+                        // ByteBuffer buffer = ByteBuffer.allocate(1024);
+                        // int bytesRead = client.read(buffer);
+                        // if (bytesRead == -1) {
+                        //     client.close();
+                        //     break;
+                        // }
+                        // buffer.flip();
+                        // String request = new String(buffer.array(), buffer.position(), bytesRead);
+                        // String[] req = request.split("\r\n\r\n");
+                        // // // System.out.println(request);
+                        // // //
+                        // // System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                        // // String[] sub = Arrays.copyOfRange(req, 0, 1);
+
+                        // for (String line : req) {
+                        //     // String[] l =line.split(":");
+                        //     System.out.println(count + "====>" + line);
+                        //     count++;
+                        // }
+                        handleRead(key);
                     }
                 } else {
                     System.out.println("ikhan");
@@ -76,8 +82,15 @@ public class NioServer {
     }
 
     private void handleAccept(ServerSocketChannel channel, List<Server> virtualHost) throws IOException {
-        var client = channel.accept();
+        SocketChannel client = channel.accept();
         client.configureBlocking(false);
-        client.register(selector, SelectionKey.OP_READ, virtualHost);
+        SelectionKey key = client.register(selector, SelectionKey.OP_READ);
+        ClientHandler handlerClient = new ClientHandler(client, virtualHost);
+        key.attach(handlerClient);
+    }
+
+    private void handleRead(SelectionKey key) throws IOException {
+        ClientHandler cl = (ClientHandler) key.attachment();
+        cl.read();
     }
 }
