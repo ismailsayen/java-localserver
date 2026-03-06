@@ -13,7 +13,7 @@ public class ClientHandler {
     private SocketChannel client;
     private Server virtualHosts;
     private Long lastActivity;
-    private ByteArrayOutputStream byteArrayOutputStream;
+    private ByteArrayOutputStream bodyAccumulator;
     private Boolean headersFounded;
     private ByteBuffer bufferReader;
     private HttpRequest httpRequest;
@@ -24,8 +24,8 @@ public class ClientHandler {
         this.client = client;
         this.virtualHosts = virtualHosts;
         this.headersFounded = false;
-        this.bufferReader = ByteBuffer.allocate(2048);
-        this.byteArrayOutputStream = new ByteArrayOutputStream();
+        this.bufferReader = ByteBuffer.allocate(4096);
+        this.bodyAccumulator = new ByteArrayOutputStream();
     }
 
     public void read() throws IOException {
@@ -39,10 +39,10 @@ public class ClientHandler {
         this.bufferReader.flip();
         byte[] data = new byte[bufferReader.remaining()];
         bufferReader.get(data);
-        this.byteArrayOutputStream.write(data);
+        this.bodyAccumulator.write(data);
         bufferReader.clear();
         if (!headersFounded) {
-            byte[] fullData = byteArrayOutputStream.toByteArray();
+            byte[] fullData = bodyAccumulator.toByteArray();
             String req = new String(fullData);
             int index = req.indexOf("\r\n\r\n");
             if (index != -1) {
@@ -53,22 +53,27 @@ public class ClientHandler {
                 headersFounded = true;
                 int bodyStart = index + 4;
                 int bodyTotal = fullData.length - bodyStart;
-                byteArrayOutputStream.reset();
-                byteArrayOutputStream.write(data, bodyStart, bodyTotal);
-                System.out.println("headers==>\n" + headerHttp.getHeaders());
+                this.totalByteRead = bodyTotal;
+                bodyAccumulator.reset();
+                if (bodyTotal > 0) {
+                    bodyAccumulator.write(data, bodyStart, bodyTotal);
+
+                }
+                // System.out.println("headers==>\n" + headerHttp.getHeaders());
+
             }
         } else {
             if (this.httpRequest.getStatus() == RequestStatus.READY) {
-                System.out.println("req ready for been read");
+                System.out.println("req ready for been write");
                 return;
             }
 
             if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
-
                 if (this.contentLength <= this.totalByteRead) {
-                    byte[] fullData = byteArrayOutputStream.toByteArray();
+                    byte[] fullData = bodyAccumulator.toByteArray();
                     String req = new String(fullData);
                     System.out.println("Body====>\n" + req);
+                    // System.out.println(httpRequest.getBoundary());
                 }
             }
         }
@@ -107,11 +112,11 @@ public class ClientHandler {
     }
 
     public ByteArrayOutputStream getByteArrayOutputStream() {
-        return byteArrayOutputStream;
+        return bodyAccumulator;
     }
 
-    public void setByteArrayOutputStream(ByteArrayOutputStream byteArrayOutputStream) {
-        this.byteArrayOutputStream = byteArrayOutputStream;
+    public void setByteArrayOutputStream(ByteArrayOutputStream bodyAccumulator) {
+        this.bodyAccumulator = bodyAccumulator;
     }
 
     public HttpRequest getHttpRequest() {
