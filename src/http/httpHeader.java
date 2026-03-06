@@ -22,7 +22,7 @@ public class HttpHeader {
         obj.setVersion(reqLine[2]);
         Map<String, String> map = new HashMap<>();
         for (int i = 1; i < request.length; i++) {
-            String[] line = request[i].split(":",2);
+            String[] line = request[i].split(":", 2);
             String key = line[0].trim().toLowerCase();
             String val = line[1].trim().toLowerCase();
             map.put(key, val);
@@ -30,6 +30,7 @@ public class HttpHeader {
         obj.setHeaders(map);
         return obj;
     }
+        // get Request_line
 
     public String getMethod() {
         return method;

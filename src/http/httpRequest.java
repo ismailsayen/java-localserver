@@ -33,16 +33,13 @@ public class HttpRequest {
     private void validatePayloadMethod() {
         String cl = httpHeader.getHeaders().get("content-length");
         String te = httpHeader.getHeaders().get("transfer-encoding");
-
+        
         if (cl == null && te == null) {
-            // Un POST/PUT sans indication de taille est une erreur 411 Length Required
             this.status = Request_Status.ERROR;
         } else if (cl != null) {
             this.contentLength = Integer.parseInt(cl);
-            // Si Content-Length est 0, on n'attend rien, donc c'est READY
             this.status = (this.contentLength == 0) ? Request_Status.READY : Request_Status.PROCESSING;
         } else {
-            // C'est du chunked encoding
             this.status = Request_Status.PROCESSING;
         }
     }
