@@ -2,7 +2,7 @@ package Nio;
 
 import DTO.Server;
 import http.HttpHeader;
-
+import http.HttpRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -14,7 +14,9 @@ public class ClientHandler {
     private Long lastActivity;
     private ByteArrayOutputStream byteArrayOutputStream;
     private Boolean headersFounded;
-    private ByteBuffer bufferReader;    
+    private ByteBuffer bufferReader;
+    private HttpRequest httpRequest;
+    private int contentLength = 0;
 
     public ClientHandler(SocketChannel client, Server virtualHosts) {
         this.client = client;
@@ -44,13 +46,13 @@ public class ClientHandler {
             if (index != -1) {
                 HttpHeader headerHttp = new HttpHeader().parseHeaders(req.substring(0,
                         index));
+                this.httpRequest = new HttpRequest(headerHttp);
+                this.contentLength = httpRequest.getContentLength();
                 headersFounded = true;
                 int bodyStart = index + 4;
                 int bodyTotal = fullData.length - bodyStart;
                 byteArrayOutputStream.reset();
                 byteArrayOutputStream.write(data, bodyStart, bodyTotal);
-                // System.out.println("Headers terminés. Body actuel : " + byteArrayOutputStream.size() + " octets");
-                System.out.println(headerHttp.getHeaders());
             }
         } else {
             // Gestion du body simple pour l'instant
@@ -96,5 +98,13 @@ public class ClientHandler {
 
     public void setByteArrayOutputStream(ByteArrayOutputStream byteArrayOutputStream) {
         this.byteArrayOutputStream = byteArrayOutputStream;
+    }
+
+    public HttpRequest getHttpRequest() {
+        return httpRequest;
+    }
+
+    public void setHttpRequest(HttpRequest httpRequest) {
+        this.httpRequest = httpRequest;
     }
 }

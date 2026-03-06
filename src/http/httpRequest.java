@@ -1,18 +1,18 @@
 package http;
 
-enum Request_Status {
-    READY,
-    PROCESSING,
-    METHOD_NOT_ALLOWED,
-    ERROR
-}
+public class HttpRequest {
+    public enum Request_Status {
+        READY,
+        PROCESSING,
+        METHOD_NOT_ALLOWED,
+        ERROR
+    }
 
-public class httpRequest {
     private HttpHeader httpHeader;
     private Request_Status status;
     private int contentLength = 0;
 
-    public httpRequest(HttpHeader httpHeader) {
+    public HttpRequest(HttpHeader httpHeader) {
         this.httpHeader = httpHeader;
         String method = httpHeader.getMethod().toUpperCase();
 
@@ -21,7 +21,7 @@ public class httpRequest {
                 this.status = Request_Status.READY;
                 break;
 
-            case "POST", "PUT":
+            case "POST":
                 validatePayloadMethod();
                 break;
 
@@ -47,7 +47,6 @@ public class httpRequest {
         }
     }
 
-  
     public int getContentLength() {
         return contentLength;
     }

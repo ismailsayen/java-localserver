@@ -51,26 +51,7 @@ public class NioServer {
                     }
                 } else if (key.isReadable()) {
                     if (key.channel() instanceof SocketChannel) {
-                        // ByteBuffer buffer = ByteBuffer.allocate(1024);
-                        // int bytesRead = client.read(buffer);
-                        // if (bytesRead == -1) {
-                        // client.close();
-                        // break;
-                        // }
-                        // buffer.flip();
-                        // String request = new String(buffer.array(), buffer.position(), bytesRead);
-                        // String[] req = request.split("\r\n\r\n");
-                        // // // System.out.println(request);
-                        // // //
-                        // //
-                        // System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-                        // // String[] sub = Arrays.copyOfRange(req, 0, 1);
-
-                        // for (String line : req) {
-                        // // String[] l =line.split(":");
-                        // System.out.println(count + "====>" + line);
-                        // count++;
-                        // }
+                       
                         handleRead(key);
                     }
                 } else {
