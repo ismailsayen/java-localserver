@@ -3,6 +3,7 @@ package Nio;
 import DTO.Server;
 import http.HttpHeader;
 import http.HttpRequest;
+import http.RequestStatus;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -16,6 +17,7 @@ public class ClientHandler {
     private Boolean headersFounded;
     private ByteBuffer bufferReader;
     private HttpRequest httpRequest;
+    private int totalByteRead = 0;
     private int contentLength = 0;
 
     public ClientHandler(SocketChannel client, Server virtualHosts) {
@@ -33,8 +35,8 @@ public class ClientHandler {
             this.client.close();
             return;
         }
-
-        bufferReader.flip();
+        this.totalByteRead += bytesRead;
+        this.bufferReader.flip();
         byte[] data = new byte[bufferReader.remaining()];
         bufferReader.get(data);
         this.byteArrayOutputStream.write(data);
@@ -53,10 +55,22 @@ public class ClientHandler {
                 int bodyTotal = fullData.length - bodyStart;
                 byteArrayOutputStream.reset();
                 byteArrayOutputStream.write(data, bodyStart, bodyTotal);
+                System.out.println("headers==>\n" + headerHttp.getHeaders());
             }
         } else {
-            // Gestion du body simple pour l'instant
-            System.out.println("Lecture du body... Taille totale : " + new String(byteArrayOutputStream.toByteArray()));
+            if (this.httpRequest.getStatus() == RequestStatus.READY) {
+                System.out.println("req ready for been read");
+                return;
+            }
+
+            if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
+
+                if (this.contentLength <= this.totalByteRead) {
+                    byte[] fullData = byteArrayOutputStream.toByteArray();
+                    String req = new String(fullData);
+                    System.out.println("Body====>\n" + req);
+                }
+            }
         }
     }
 
@@ -107,4 +121,5 @@ public class ClientHandler {
     public void setHttpRequest(HttpRequest httpRequest) {
         this.httpRequest = httpRequest;
     }
+
 }

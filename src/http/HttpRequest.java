@@ -1,15 +1,9 @@
 package http;
 
 public class HttpRequest {
-    public enum Request_Status {
-        READY,
-        PROCESSING,
-        METHOD_NOT_ALLOWED,
-        ERROR
-    }
 
     private HttpHeader httpHeader;
-    private Request_Status status;
+    private RequestStatus status;
     private int contentLength = 0;
 
     public HttpRequest(HttpHeader httpHeader) {
@@ -18,7 +12,7 @@ public class HttpRequest {
 
         switch (method) {
             case "GET", "DELETE":
-                this.status = Request_Status.READY;
+                this.status = RequestStatus.READY;
                 break;
 
             case "POST":
@@ -26,7 +20,7 @@ public class HttpRequest {
                 break;
 
             default:
-                this.status = Request_Status.METHOD_NOT_ALLOWED;
+                this.status = RequestStatus.METHOD_NOT_ALLOWED;
         }
     }
 
@@ -35,12 +29,12 @@ public class HttpRequest {
         String te = httpHeader.getHeaders().get("transfer-encoding");
         
         if (cl == null && te == null) {
-            this.status = Request_Status.ERROR;
+            this.status = RequestStatus.ERROR;
         } else if (cl != null) {
             this.contentLength = Integer.parseInt(cl);
-            this.status = (this.contentLength == 0) ? Request_Status.READY : Request_Status.PROCESSING;
+            this.status = (this.contentLength == 0) ? RequestStatus.READY : RequestStatus.PROCESSING;
         } else {
-            this.status = Request_Status.PROCESSING;
+            this.status = RequestStatus.PROCESSING;
         }
     }
 
@@ -48,11 +42,11 @@ public class HttpRequest {
         return contentLength;
     }
 
-    public Request_Status getStatus() {
+    public RequestStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Request_Status status) {
+    public void setStatus(RequestStatus status) {
         this.status = status;
     }
 }
