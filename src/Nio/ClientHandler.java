@@ -18,7 +18,7 @@ public class ClientHandler {
     private ByteBuffer bufferReader;
     private HttpRequest httpRequest;
     private int totalByteRead = 0;
-    private int contentLength = 0;
+    private Long contentLength = 0L;
 
     public ClientHandler(SocketChannel client, Server virtualHosts) {
         this.client = client;
@@ -42,26 +42,7 @@ public class ClientHandler {
         this.bodyAccumulator.write(data);
         bufferReader.clear();
         if (!headersFounded) {
-            byte[] fullData = bodyAccumulator.toByteArray();
-            String req = new String(fullData);
-            int index = req.indexOf("\r\n\r\n");
-            if (index != -1) {
-                HttpHeader headerHttp = new HttpHeader().parseHeaders(req.substring(0,
-                        index));
-                this.httpRequest = new HttpRequest(headerHttp);
-                this.contentLength = httpRequest.getContentLength();
-                headersFounded = true;
-                int bodyStart = index + 4;
-                int bodyTotal = fullData.length - bodyStart;
-                this.totalByteRead = bodyTotal;
-                bodyAccumulator.reset();
-                if (bodyTotal > 0) {
-                    bodyAccumulator.write(data, bodyStart, bodyTotal);
-
-                }
-                // System.out.println("headers==>\n" + headerHttp.getHeaders());
-
-            }
+            parseHeaders(data);
         } else {
             if (this.httpRequest.getStatus() == RequestStatus.READY) {
                 System.out.println("req ready for been write");
@@ -75,6 +56,27 @@ public class ClientHandler {
                     System.out.println("Body====>\n" + req);
                     // System.out.println(httpRequest.getBoundary());
                 }
+            }
+        }
+    }
+
+    private void parseHeaders(byte[] data) {
+        byte[] fullData = bodyAccumulator.toByteArray();
+        String req = new String(fullData);
+        int index = req.indexOf("\r\n\r\n");
+        if (index != -1) {
+            HttpHeader headerHttp = new HttpHeader().parseHeaders(req.substring(0,
+                    index));
+
+            this.httpRequest = new HttpRequest(headerHttp);
+            this.contentLength = httpRequest.getContentLength();
+            headersFounded = true;
+            int bodyStart = index + 4;
+            int bodyTotal = fullData.length - bodyStart;
+            this.totalByteRead = bodyTotal;
+            bodyAccumulator.reset();
+            if (bodyTotal > 0) {
+                bodyAccumulator.write(data, bodyStart, bodyTotal);
             }
         }
     }

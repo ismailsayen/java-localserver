@@ -1,13 +1,18 @@
 package http;
 
+import handlers.CgiHandler;
+import handlers.MultipartHandler;
+import handlers.StaticFileHandler;
+
 public class HttpRequest {
 
     private HttpHeader httpHeader;
     private RequestStatus status;
-    private int contentLength = 0;
+    private Long contentLength = 0L;
     private boolean chnked = false;
     private Boolean isMultipart = false;
     private String boundary;
+    private HttpHandler hnadler;
 
     public HttpRequest(HttpHeader httpHeader) {
         this.httpHeader = httpHeader;
@@ -29,9 +34,9 @@ public class HttpRequest {
         if (cl == null && te == null) {
 
             this.status = (httpHeader.getMethod().toUpperCase().equals("POST")) ? RequestStatus.ERROR
-                    : RequestStatus.PROCESSING;
+                    : RequestStatus.READY;
         } else if (cl != null) {
-            this.contentLength = Integer.parseInt(cl);
+            this.contentLength = Long.valueOf(cl);
             this.status = (this.contentLength == 0) ? RequestStatus.READY : RequestStatus.PROCESSING;
         } else {
             this.chnked = true;
@@ -56,7 +61,30 @@ public class HttpRequest {
         }
     }
 
-    public int getContentLength() {
+    private void assignHandler(){
+        String path = httpHeader.getPath();
+        String method = httpHeader.getMethod().toUpperCase();
+        if (path.contains("/cgi-bin/") || path.endsWith(".py") || path.endsWith(".php")) {
+            this.setHnadler(new CgiHandler());
+            return;
+        }
+
+        // 2. Détection Multipart
+        if (this.isMultipart) {
+            this.setHnadler(new MultipartHandler());
+            return;
+        }
+
+        // 3. Cas Statique (GET / DELETE)
+        if (method.equals("GET") || method.equals("DELETE")) {
+            this.setHnadler(new StaticFileHandler());
+            return;
+        }
+
+          this.setHnadler(new StaticFileHandler());
+    }   
+
+    public Long getContentLength() {
         return contentLength;
     }
 
@@ -86,5 +114,13 @@ public class HttpRequest {
 
     public String getBoundary() {
         return this.boundary;
+    }
+
+    public HttpHandler getHnadler() {
+        return hnadler;
+    }
+
+    public void setHnadler(HttpHandler hnadler) {
+        this.hnadler = hnadler;
     }
 }
