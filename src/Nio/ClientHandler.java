@@ -58,6 +58,7 @@ public class ClientHandler {
             // Gestion du body simple pour l'instant
             System.out.println("Lecture du body... Taille totale : " + new String(byteArrayOutputStream.toByteArray()));
         }
+        
     }
 
     public SocketChannel getClient() {
