@@ -40,7 +40,8 @@ public class NioServer {
         }
     }
 
-    private void handleAccept(ServerSocketChannel channel, Server virtualHost) throws IOException {
+    private void handleAccept(ServerSocketChannel channel, Server virtualHost)
+            throws IOException {
         SocketChannel client = channel.accept();
         client.configureBlocking(false);
         SelectionKey key = client.register(selector, SelectionKey.OP_READ);

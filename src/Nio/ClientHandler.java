@@ -79,6 +79,7 @@ public class ClientHandler {
                 bodyAccumulator.write(data, bodyStart, bodyTotal);
             }
         }
+        
     }
 
     public SocketChannel getClient() {
