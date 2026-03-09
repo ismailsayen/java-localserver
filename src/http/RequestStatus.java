@@ -1,6 +1,5 @@
 package http;
 
-import java.lang.reflect.Method;
 
 public enum RequestStatus {
     READY,

@@ -39,8 +39,7 @@ public class HttpRequest {
     // public String CheckMethod(){
 
     //     if ()
-
-
+    
     // }
     private void validatePayloadMethod() {
         String cl = httpHeader.getHeaders().get("content-length");

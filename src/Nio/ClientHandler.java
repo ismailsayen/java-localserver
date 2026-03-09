@@ -25,7 +25,7 @@ public class ClientHandler {
         this.client = client;
         this.virtualHosts = virtualHosts;
         this.headersFounded = false;
-        this.bufferReader = ByteBuffer.allocate(4096);
+        this.bufferReader = ByteBuffer.allocate(1024);
         this.bodyAccumulator = new ByteArrayOutputStream();
     }
 
@@ -83,6 +83,7 @@ public class ClientHandler {
             }
             this.totalByteRead = bodyTotal;
         }
+        
     }
 
     private void sendHelloResponse() throws IOException {
