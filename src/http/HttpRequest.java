@@ -1,5 +1,7 @@
 package http;
 
+import DTO.Route;
+import DTO.Server;
 import handlers.CgiHandler;
 import handlers.MultipartHandler;
 import handlers.StaticFileHandler;
@@ -13,20 +15,33 @@ public class HttpRequest {
     private Boolean isMultipart = false;
     private String boundary;
     private HttpHandler hnadler;
+    private Server server;
+    private Route route;
 
-    public HttpRequest(HttpHeader httpHeader) {
+    public HttpRequest(HttpHeader httpHeader, Server server) {
         this.httpHeader = httpHeader;
-        String method = httpHeader.getMethod().toUpperCase();
+        this.server = server;
+        // String method = httpHeader.getMethod().toUpperCase();
 
-        switch (method) {
-            case "GET", "DELETE" -> validatePayloadMethod();
+        // switch (method) {
+        // case "GET", "DELETE" -> validatePayloadMethod();
 
-            case "POST" -> validatePayloadMethod();
+        // case "POST" -> validatePayloadMethod();
 
-            default -> this.status = RequestStatus.METHOD_NOT_ALLOWED;
-        }
+        // default -> this.status = RequestStatus.METHOD_NOT_ALLOWED;
+        // }
     }
 
+    // public Route findRoute(){
+    //     for
+    // }
+
+    // public String CheckMethod(){
+
+    //     if ()
+
+
+    // }
     private void validatePayloadMethod() {
         String cl = httpHeader.getHeaders().get("content-length");
         String te = httpHeader.getHeaders().get("transfer-encoding");
@@ -61,7 +76,7 @@ public class HttpRequest {
         }
     }
 
-    private void assignHandler(){
+    private void assignHandler() {
         String path = httpHeader.getPath();
         String method = httpHeader.getMethod().toUpperCase();
         if (path.contains("/cgi-bin/") || path.endsWith(".py") || path.endsWith(".php")) {
@@ -81,8 +96,8 @@ public class HttpRequest {
             return;
         }
 
-          this.setHnadler(new StaticFileHandler());
-    }   
+        this.setHnadler(new StaticFileHandler());
+    }
 
     public Long getContentLength() {
         return contentLength;
@@ -122,5 +137,21 @@ public class HttpRequest {
 
     public void setHnadler(HttpHandler hnadler) {
         this.hnadler = hnadler;
+    }
+
+    public Server getServer() {
+        return server;
+    }
+
+    public void setServer(Server server) {
+        this.server = server;
+    }
+
+    public Route getRoute() {
+        return route;
+    }
+
+    public void setRoute(Route route) {
+        this.route = route;
     }
 }

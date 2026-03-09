@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 
 public class ClientHandler {
     private SocketChannel client;
@@ -31,54 +32,84 @@ public class ClientHandler {
     public void read() throws IOException {
         this.lastActivity = System.currentTimeMillis();
         int bytesRead = this.client.read(bufferReader);
+
         if (bytesRead == -1) {
             this.client.close();
             return;
         }
+        if (bytesRead == 0)
+            return; 
         this.totalByteRead += bytesRead;
         this.bufferReader.flip();
         byte[] data = new byte[bufferReader.remaining()];
         bufferReader.get(data);
         this.bodyAccumulator.write(data);
         bufferReader.clear();
-        if (!headersFounded) {
-            parseHeaders(data);
-        } else {
-            if (this.httpRequest.getStatus() == RequestStatus.READY) {
-                System.out.println("req ready for been write");
-                return;
-            }
 
-            if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
-                if (this.contentLength <= this.totalByteRead) {
-                    byte[] fullData = bodyAccumulator.toByteArray();
-                    String req = new String(fullData);
-                    System.out.println("Body====>\n" + req);
-                    // System.out.println(httpRequest.getBoundary());
+        if (!headersFounded) {
+            parseHeaders(); 
+        }
+
+        if (headersFounded) {
+            if (this.httpRequest.getStatus() == RequestStatus.READY) {
+                sendHelloResponse();
+            } else if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
+                // Vérifier si on a fini de lire le body
+                if (this.bodyAccumulator.size() >= this.contentLength) {
+                    String body = new String(bodyAccumulator.toByteArray());
+                    System.out.println(body);
                 }
             }
         }
     }
 
-    private void parseHeaders(byte[] data) {
+    private void parseHeaders() {
         byte[] fullData = bodyAccumulator.toByteArray();
-        String req = new String(fullData);
+        String req = new String(fullData, StandardCharsets.UTF_8);
         int index = req.indexOf("\r\n\r\n");
-        if (index != -1) {
-            HttpHeader headerHttp = new HttpHeader().parseHeaders(req.substring(0,
-                    index));
 
-            this.httpRequest = new HttpRequest(headerHttp);
-            this.contentLength = httpRequest.getContentLength();
-            headersFounded = true;
+        if (index != -1) {
+            HttpHeader headerHttp = new HttpHeader().parseHeaders(req.substring(0, index));
+            this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
+            this.contentLength = (long) httpRequest.getContentLength();
+            this.headersFounded = true;
+
             int bodyStart = index + 4;
             int bodyTotal = fullData.length - bodyStart;
-            this.totalByteRead = bodyTotal;
+
             bodyAccumulator.reset();
             if (bodyTotal > 0) {
-                bodyAccumulator.write(data, bodyStart, bodyTotal);
+                bodyAccumulator.write(fullData, bodyStart, bodyTotal);
             }
+            this.totalByteRead = bodyTotal;
         }
+    }
+
+    private void sendHelloResponse() throws IOException {
+        String html = "<html><body><h1>wa Akhiiiiiiiiiiiiran </h1></body></html>";
+        byte[] bodyBytes = html.getBytes(StandardCharsets.UTF_8);
+
+        // Utilisation d'une String simple pour éviter les problèmes d'indentation des
+        // Text Blocks
+        String responseHeader = """
+                                HTTP/1.1 200 OK\r
+                                Content-Type: text/html\r
+                                Content-Length: """ + bodyBytes.length + "\r\n" +
+                "Connection: close\r\n" +
+                "\r\n";
+
+        byte[] headerBytes = responseHeader.getBytes(StandardCharsets.UTF_8);
+        ByteBuffer respBuffer = ByteBuffer.allocate(headerBytes.length + bodyBytes.length);
+        respBuffer.put(headerBytes);
+        respBuffer.put(bodyBytes);
+        respBuffer.flip();
+
+        while (respBuffer.hasRemaining()) {
+            client.write(respBuffer);
+        }
+
+        // System.out.println("Réponse envoyée, fermeture du client.");
+        client.close();
     }
 
     public SocketChannel getClient() {
