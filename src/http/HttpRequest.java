@@ -9,7 +9,7 @@ import handlers.StaticFileHandler;
 public class HttpRequest {
 
     private HttpHeader httpHeader;
-    private RequestStatus status;
+    private RequestStatus status=RequestStatus.READY;
     private Long contentLength = 0L;
     private boolean chnked = false;
     private Boolean isMultipart = false;
@@ -39,7 +39,7 @@ public class HttpRequest {
     // public String CheckMethod(){
 
     //     if ()
-    
+
     // }
     private void validatePayloadMethod() {
         String cl = httpHeader.getHeaders().get("content-length");
