@@ -11,8 +11,7 @@ public class Server {
     private String name;
     private List<Route> routes;
     private Long limitRequestBody;
-    private Map<String,String> errorPages;
-
+    private Map<String, String> errorPages;
 
     public String getHost() {
         return host;
@@ -62,26 +61,26 @@ public class Server {
         this.routes = routes;
     }
 
-    public Map<String,String> getErrorPages() {
+    public Map<String, String> getErrorPages() {
         return errorPages;
     }
 
-    public void setErrorPages(Map<String,String> errorPages) {
+    public void setErrorPages(Map<String, String> errorPages) {
         this.errorPages = errorPages;
     }
 
     @Override
-public String toString() {
-    return """
-           Server {
-             name='""" + name + '\'' + ",\n" +
-            "  host='" + host + '\'' + ",\n" +
-            "  ports=" + port + ",\n" +
-            "  defaultServer=" + defaultServer + ",\n" +
-            "  limitRequestBody=" + limitRequestBody + ",\n" +
-            "  routes=" + routes + ",\n" +
-            "  errorPages=" + errorPages + "\n" +
-            '}';
-}
+    public String toString() {
+        return """
+                Server {
+                  name='""" + name + '\'' + ",\n" +
+                "  host='" + host + '\'' + ",\n" +
+                "  ports=" + port + ",\n" +
+                "  defaultServer=" + defaultServer + ",\n" +
+                "  limitRequestBody=" + limitRequestBody + ",\n" +
+                "  routes=" + routes + ",\n" +
+                "  errorPages=" + errorPages + "\n" +
+                '}';
+    }
 
 }

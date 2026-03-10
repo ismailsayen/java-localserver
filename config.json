@@ -17,6 +17,18 @@
         "root": "./www/scripts",
         "methods": ["GET", "POST"],
         "cgiExtension": ".py"
+      },
+      {
+        "path": "/www",
+        "root": "./www/html/primary",
+        "methods": ["GET"],
+        "index": "index.html"
+      },
+      {
+        "path": "/www",
+        "root": "./www/html/primary",
+        "methods": ["GET"],
+        "directoryListening": true
       }
     ]
   }

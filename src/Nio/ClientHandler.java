@@ -50,6 +50,7 @@ public class ClientHandler {
         if (!headersFounded) {
             parseHeaders();
         }
+
         if (headersFounded) {
             if (this.httpRequest.getStatus() == RequestStatus.READY) {
                 // System.out.println("ssss");
@@ -72,6 +73,12 @@ public class ClientHandler {
         if (index != -1) {
             HttpHeader headerHttp = HttpHeader.parseHeaders(req.substring(0, index));
             this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
+            try {
+                this.httpRequest.HandleRequest();
+            } catch (Exception e) {
+                System.out.println("=>>>>>>>" + e.getMessage());
+                return;
+            }
             this.contentLength = (long) httpRequest.getContentLength();
             this.headersFounded = true;
 

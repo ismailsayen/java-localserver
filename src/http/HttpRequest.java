@@ -9,7 +9,7 @@ import handlers.StaticFileHandler;
 public class HttpRequest {
 
     private HttpHeader httpHeader;
-    private RequestStatus status=RequestStatus.READY;
+    private RequestStatus status = RequestStatus.READY;
     private Long contentLength = 0L;
     private boolean chnked = false;
     private Boolean isMultipart = false;
@@ -21,26 +21,34 @@ public class HttpRequest {
     public HttpRequest(HttpHeader httpHeader, Server server) {
         this.httpHeader = httpHeader;
         this.server = server;
-        // String method = httpHeader.getMethod().toUpperCase();
-
-        // switch (method) {
-        // case "GET", "DELETE" -> validatePayloadMethod();
-
-        // case "POST" -> validatePayloadMethod();
-
-        // default -> this.status = RequestStatus.METHOD_NOT_ALLOWED;
-        // }
     }
 
-    // public Route findRoute(){
-    //     for
-    // }
+    public void HandleRequest() {
+        Route route = this.extractRoute();
 
-    // public String CheckMethod(){
+        
+    }
 
-    //     if ()
+    private Route extractRoute() {
+        String method = this.httpHeader.getMethod().toUpperCase();
+        String path = this.httpHeader.getPath();
 
-    // }
+        for (Route route : this.server.getRoutes()) {
+            if (!route.getPath().equals(path))
+                continue;
+
+            if (!route.getMethods().contains(method)) {
+                this.status = RequestStatus.METHOD_NOT_ALLOWED;
+                throw new RuntimeException("Method not allowed");
+            }
+
+            return route;
+        }
+
+        this.status = RequestStatus.NOT_FOUND;
+        throw new RuntimeException("Resources not found");
+    }
+
     private void validatePayloadMethod() {
         String cl = httpHeader.getHeaders().get("content-length");
         String te = httpHeader.getHeaders().get("transfer-encoding");
