@@ -7,9 +7,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class NioServer {
     private Selector selector;
@@ -55,23 +53,13 @@ public class NioServer {
     }
 
     private void createTcpListeners(List<Server> serverConfig) throws IOException {
-        Map<String, Server> BindData = new HashMap<>();
         for (Server config : serverConfig) {
             for (Object port : config.getPort()) {
-                String dns = config.getHost() + ":" + port;
-                BindData.put(dns, config);
+                ServerSocketChannel scc = ServerSocketChannel.open();
+                scc.configureBlocking(false);
+                scc.bind(new InetSocketAddress(Integer.parseInt("" + port)));
+                scc.register(selector, SelectionKey.OP_ACCEPT, config);
             }
-        }
-
-        for (Map.Entry<String, Server> serv : BindData.entrySet()) {
-            String dns = serv.getKey();
-            String[] parts = dns.split(":");
-            // String host = parts[0];
-            int port = Integer.parseInt(parts[1]);
-            ServerSocketChannel scc = ServerSocketChannel.open();
-            scc.configureBlocking(false);
-            scc.bind(new InetSocketAddress(port));
-            scc.register(selector, SelectionKey.OP_ACCEPT, serv.getValue());
         }
     }
 }

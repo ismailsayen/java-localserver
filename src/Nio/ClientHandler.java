@@ -38,7 +38,8 @@ public class ClientHandler {
             return;
         }
         if (bytesRead == 0)
-            return; 
+            return;
+
         this.totalByteRead += bytesRead;
         this.bufferReader.flip();
         byte[] data = new byte[bufferReader.remaining()];
@@ -47,9 +48,8 @@ public class ClientHandler {
         bufferReader.clear();
 
         if (!headersFounded) {
-            parseHeaders(); 
+            parseHeaders();
         }
-
         if (headersFounded) {
             if (this.httpRequest.getStatus() == RequestStatus.READY) {
                 // System.out.println("ssss");
@@ -70,7 +70,7 @@ public class ClientHandler {
         int index = req.indexOf("\r\n\r\n");
 
         if (index != -1) {
-            HttpHeader headerHttp = new HttpHeader().parseHeaders(req.substring(0, index));
+            HttpHeader headerHttp = HttpHeader.parseHeaders(req.substring(0, index));
             this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
             this.contentLength = (long) httpRequest.getContentLength();
             this.headersFounded = true;
@@ -84,7 +84,7 @@ public class ClientHandler {
             }
             this.totalByteRead = bodyTotal;
         }
-        
+
     }
 
     private void sendHelloResponse() throws IOException {
@@ -94,9 +94,9 @@ public class ClientHandler {
         // Utilisation d'une String simple pour éviter les problèmes d'indentation des
         // Text Blocks
         String responseHeader = """
-                                HTTP/1.1 200 OK\r
-                                Content-Type: text/html\r
-                                Content-Length: """ + bodyBytes.length + "\r\n" +
+                HTTP/1.1 200 OK\r
+                Content-Type: text/html\r
+                Content-Length: """ + bodyBytes.length + "\r\n" +
                 "Connection: close\r\n" +
                 "\r\n";
 

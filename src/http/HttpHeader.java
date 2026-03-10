@@ -6,20 +6,20 @@ import java.util.Map;
 public class HttpHeader {
     private String method;
     private String path;
-    private String version;
+    private String protocol;
     private Map<String, String> headers;
 
-    public HttpHeader parseHeaders(String reqHead) {
+    public static HttpHeader parseHeaders(String reqHead) {
         String[] request = reqHead.split("\r\n");
-
-        HttpHeader obj = new HttpHeader();
 
         // get Request_line
         String[] reqLine = request[0].split("\s");
 
-        obj.setMethod(reqLine[0]);
-        obj.setPath(reqLine[1]);
-        obj.setVersion(reqLine[2]);
+        HttpHeader httpHeader = new HttpHeader();
+
+        httpHeader.setMethod(reqLine[0]);
+        httpHeader.setPath(reqLine[1]);
+        httpHeader.setProtocol(reqLine[2]);
         Map<String, String> map = new HashMap<>();
         for (int i = 1; i < request.length; i++) {
             String[] line = request[i].split(":", 2);
@@ -27,10 +27,9 @@ public class HttpHeader {
             String val = line[1].trim().toLowerCase();
             map.put(key, val);
         }
-        obj.setHeaders(map);
-        return obj;
+        httpHeader.setHeaders(map);
+        return httpHeader;
     }
-        // get Request_line
 
     public String getMethod() {
         return method;
@@ -48,12 +47,12 @@ public class HttpHeader {
         this.path = path;
     }
 
-    public String getVersion() {
-        return version;
+    public String getProtocol() {
+        return protocol;
     }
 
-    public void setVersion(String version) {
-        this.version = version;
+    public void setProtocol(String protocol) {
+        this.protocol = protocol;
     }
 
     public Map<String, String> getHeaders() {
@@ -62,5 +61,10 @@ public class HttpHeader {
 
     public void setHeaders(Map<String, String> headers) {
         this.headers = headers;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Method: %s | Path: %s | Protocol: %s", method, path, protocol);
     }
 }
