@@ -8,18 +8,20 @@ public class StaticFileHandler implements HttpHandler {
     @Override
     public void read() {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'read'");
+       System.out.println("Unimplemented method 'read'  StaticFile");
     }
 
     @Override
     public void write() {
-        System.out.println("static File");
+        System.out.println(" write static File");
     }
 
     @Override
     public HttpResponse handel() {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'handel'");
+       System.out.println("Unimplemented method 'handel'  StaticFile");
+       return null;
+
     }
     
 }

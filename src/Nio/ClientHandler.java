@@ -29,41 +29,44 @@ public class ClientHandler {
         this.bodyAccumulator = new ByteArrayOutputStream();
     }
 
-    public void read() throws IOException {
-        this.lastActivity = System.currentTimeMillis();
-        int bytesRead = this.client.read(bufferReader);
+        public void read() throws IOException {
+            this.lastActivity = System.currentTimeMillis();
+            int bytesRead = this.client.read(bufferReader);
 
-        if (bytesRead == -1) {
-            this.client.close();
-            return;
-        }
-        if (bytesRead == 0)
-            return;
+            if (bytesRead == -1) {
+                this.client.close();
+                return;
+            }
+            if (bytesRead == 0)
+                return;
 
-        this.totalByteRead += bytesRead;
-        this.bufferReader.flip();
-        byte[] data = new byte[bufferReader.remaining()];
-        bufferReader.get(data);
-        this.bodyAccumulator.write(data);
-        bufferReader.clear();
+            this.totalByteRead += bytesRead;
+            this.bufferReader.flip();
+            byte[] data = new byte[bufferReader.remaining()];
+            bufferReader.get(data);
+            this.bodyAccumulator.write(data);
+            bufferReader.clear();
 
-        if (!headersFounded) {
-            parseHeaders();
-        }
-        if (headersFounded) {
-            if (this.httpRequest.getStatus() == RequestStatus.READY) {
-                // System.out.println("ssss");
-                // sendHelloResponse();
-                httpRequest.getHnadler().write();
-            } else if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
-                // Vérifier si on a fini de lire le body
-                if (this.bodyAccumulator.size() >= this.contentLength) {
-                    String body = new String(bodyAccumulator.toByteArray());
-                    System.out.println(body);
+            if (!headersFounded) {
+                parseHeaders();
+            }
+
+            if (headersFounded) {
+                if (this.httpRequest.getStatus() == RequestStatus.READY) {
+                    
+                    httpRequest.getHnadler().write();
+                } 
+                 if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
+                    
+                    httpRequest.getHnadler().read();
+                    
+                    // if (this.bodyAccumulator.size() >= this.contentLength) {
+                    //     String body = new String(bodyAccumulator.toByteArray());
+                    //     System.out.println(body);
+                    // }
                 }
             }
         }
-    }
 
     private void parseHeaders() {
         byte[] fullData = bodyAccumulator.toByteArray();
@@ -73,6 +76,12 @@ public class ClientHandler {
         if (index != -1) {
             HttpHeader headerHttp = HttpHeader.parseHeaders(req.substring(0, index));
             this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
+            try {
+                this.httpRequest.HandleRequest();
+            } catch (Exception e) {
+                System.out.println("=>>>>>>>" + e.getMessage());
+                return;
+            }
             this.contentLength = (long) httpRequest.getContentLength();
             this.headersFounded = true;
 
