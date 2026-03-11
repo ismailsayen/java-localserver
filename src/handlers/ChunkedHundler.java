@@ -3,7 +3,7 @@ package handlers;
 import http.HttpHandler;
 import http.HttpResponse;
 
-public class StaticFileHandler implements HttpHandler {
+public class ChunkedHundler implements HttpHandler {
 
     @Override
     public void read() {
@@ -13,7 +13,8 @@ public class StaticFileHandler implements HttpHandler {
 
     @Override
     public void write() {
-        System.out.println("static File");
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'write'");
     }
 
     @Override

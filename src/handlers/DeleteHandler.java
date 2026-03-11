@@ -3,17 +3,16 @@ package handlers;
 import http.HttpHandler;
 import http.HttpResponse;
 
-public class StaticFileHandler implements HttpHandler {
-
+public class DeleteHandler implements HttpHandler {
+    
     @Override
     public void read() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'read'");
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public void write() {
-        System.out.println("static File");
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override

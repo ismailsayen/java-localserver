@@ -1,6 +1,7 @@
 package handlers;
 
 import http.HttpHandler;
+import http.HttpResponse;
 
 public class CgiHandler implements HttpHandler {
 
@@ -14,6 +15,12 @@ public class CgiHandler implements HttpHandler {
     public void write() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'write'");
+    }
+
+    @Override
+    public HttpResponse handel() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'handel'");
     }
 
 }

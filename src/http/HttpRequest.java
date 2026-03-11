@@ -3,13 +3,14 @@ package http;
 import DTO.Route;
 import DTO.Server;
 import handlers.CgiHandler;
+import handlers.DeleteHandler;
 import handlers.MultipartHandler;
 import handlers.StaticFileHandler;
 
 public class HttpRequest {
 
     private HttpHeader httpHeader;
-    private RequestStatus status=RequestStatus.READY;
+    private RequestStatus status = RequestStatus.READY;
     private Long contentLength = 0L;
     private boolean chnked = false;
     private Boolean isMultipart = false;
@@ -21,26 +22,32 @@ public class HttpRequest {
     public HttpRequest(HttpHeader httpHeader, Server server) {
         this.httpHeader = httpHeader;
         this.server = server;
-        // String method = httpHeader.getMethod().toUpperCase();
+        this.route = server.getRoutes().get(0);
+        checkMethod();
 
-        // switch (method) {
-        // case "GET", "DELETE" -> validatePayloadMethod();
+        if (this.status == RequestStatus.METHOD_NOT_ALLOWED)
+            return;
 
-        // case "POST" -> validatePayloadMethod();
-
-        // default -> this.status = RequestStatus.METHOD_NOT_ALLOWED;
-        // }
+        validatePayloadMethod();
+        assignHandler();
     }
 
     // public Route findRoute(){
-    //     for
+    // for
     // }
 
-    // public String CheckMethod(){
+    private void checkMethod() {
 
-    //     if ()
+        String method = httpHeader.getMethod().toUpperCase();
 
-    // }
+        if (route.getMethods() == null || route.getMethods().isEmpty())
+            return;
+
+        if (!route.getMethods().contains(method)) {
+            this.status = RequestStatus.METHOD_NOT_ALLOWED;
+        }
+    }
+
     private void validatePayloadMethod() {
         String cl = httpHeader.getHeaders().get("content-length");
         String te = httpHeader.getHeaders().get("transfer-encoding");
@@ -88,9 +95,12 @@ public class HttpRequest {
             this.setHnadler(new MultipartHandler());
             return;
         }
-
-        // 3. Cas Statique (GET / DELETE)
-        if (method.equals("GET") || method.equals("DELETE")) {
+        if (method.equals("DELETE")) {
+            this.setHnadler(new DeleteHandler());
+            return;
+        }
+        // 3. Cas Statique (GET)
+        if (method.equals("GET")) {
             this.setHnadler(new StaticFileHandler());
             return;
         }
@@ -152,5 +162,13 @@ public class HttpRequest {
 
     public void setRoute(Route route) {
         this.route = route;
+    }
+
+    public HttpHeader getHttpHeader() {
+        return httpHeader;
+    }
+
+    public void setHttpHeader(HttpHeader httpHeader) {
+        this.httpHeader = httpHeader;
     }
 }

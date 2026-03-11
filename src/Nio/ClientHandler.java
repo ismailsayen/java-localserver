@@ -53,7 +53,8 @@ public class ClientHandler {
         if (headersFounded) {
             if (this.httpRequest.getStatus() == RequestStatus.READY) {
                 // System.out.println("ssss");
-                sendHelloResponse();
+                // sendHelloResponse();
+                httpRequest.getHnadler().write();
             } else if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
                 // Vérifier si on a fini de lire le body
                 if (this.bodyAccumulator.size() >= this.contentLength) {
