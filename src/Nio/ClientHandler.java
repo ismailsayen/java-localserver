@@ -25,48 +25,48 @@ public class ClientHandler {
         this.client = client;
         this.virtualHosts = virtualHosts;
         this.headersFounded = false;
-        this.bufferReader = ByteBuffer.allocate(1024);
+        this.bufferReader = ByteBuffer.allocate(2000);
         this.bodyAccumulator = new ByteArrayOutputStream();
     }
 
-        public void read() throws IOException {
-            this.lastActivity = System.currentTimeMillis();
-            int bytesRead = this.client.read(bufferReader);
+    public void read() throws IOException {
+        this.lastActivity = System.currentTimeMillis();
+        int bytesRead = this.client.read(bufferReader);
 
-            if (bytesRead == -1) {
-                this.client.close();
-                return;
+        if (bytesRead == -1) {
+            this.client.close();
+            return;
+        }
+        if (bytesRead == 0)
+            return;
+
+        this.totalByteRead += bytesRead;
+        this.bufferReader.flip();
+        byte[] data = new byte[bufferReader.remaining()];
+        bufferReader.get(data);
+        this.bodyAccumulator.write(data);
+        bufferReader.clear();
+
+        if (!headersFounded) {
+            parseHeaders();
+        }
+
+        if (headersFounded) {
+            if (this.httpRequest.getStatus() == RequestStatus.READY) {
+
+                httpRequest.getHnadler().write();
             }
-            if (bytesRead == 0)
-                return;
+            if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
 
-            this.totalByteRead += bytesRead;
-            this.bufferReader.flip();
-            byte[] data = new byte[bufferReader.remaining()];
-            bufferReader.get(data);
-            this.bodyAccumulator.write(data);
-            bufferReader.clear();
+                httpRequest.getHnadler().read();
 
-            if (!headersFounded) {
-                parseHeaders();
-            }
-
-            if (headersFounded) {
-                if (this.httpRequest.getStatus() == RequestStatus.READY) {
-                    
-                    httpRequest.getHnadler().write();
-                } 
-                 if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
-                    
-                    httpRequest.getHnadler().read();
-                    
-                    // if (this.bodyAccumulator.size() >= this.contentLength) {
-                    //     String body = new String(bodyAccumulator.toByteArray());
-                    //     System.out.println(body);
-                    // }
-                }
+                // if (this.bodyAccumulator.size() >= this.contentLength) {
+                // String body = new String(bodyAccumulator.toByteArray());
+                // System.out.println(body);
+                // }
             }
         }
+    }
 
     private void parseHeaders() {
         byte[] fullData = bodyAccumulator.toByteArray();
