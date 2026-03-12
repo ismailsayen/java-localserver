@@ -1,7 +1,8 @@
 package handlers;
 
+import Nio.ClientHandler;
 import http.HttpHandler;
-import http.HttpResponse;
+import http.HttpRequest;
 
 public class DeleteHandler implements HttpHandler {
     
@@ -15,12 +16,11 @@ public class DeleteHandler implements HttpHandler {
      System.out.println("Not supported yet. delete");
     }
 
+    
     @Override
-    public HttpResponse handel() {
+    public void handle(HttpRequest request, ClientHandler client) throws Exception {
         // TODO Auto-generated method stub
-     System.out.println("Unimplemented method 'handel' delete");
-       return null;
-
+        throw new UnsupportedOperationException("Unimplemented method 'handle'");
     }
     
 }

@@ -2,6 +2,7 @@ package http;
 
 import DTO.Route;
 import DTO.Server;
+import Nio.ClientHandler;
 import handlers.CgiHandler;
 import handlers.DeleteHandler;
 import handlers.MultipartHandler;
@@ -43,22 +44,37 @@ public class HttpRequest {
     }
 
     private Route extractRoute() {
-        String method = this.httpHeader.getMethod().toUpperCase();
-        String path = this.httpHeader.getPath();
+        String method = httpHeader.getMethod().toUpperCase();
+        String requestPath = httpHeader.getPath();
 
-        for (Route r : this.server.getRoutes()) {
-            if (!r.getPath().equals(path))
+        Route bestMatch = null;
+        int longestMatch = -1;
+
+        for (Route r : server.getRoutes()) {
+
+            String routePath = r.getPath();
+
+            if (!requestPath.startsWith(routePath))
                 continue;
 
-            if (!r.getMethods().contains(method)) {
-                this.status = RequestStatus.METHOD_NOT_ALLOWED;
-                throw new RuntimeException("Method not allowed");
+            if (routePath.length() > longestMatch) {
+                bestMatch = r;
+                longestMatch = routePath.length();
             }
-            return r;
         }
 
-        this.status = RequestStatus.NOT_FOUND;
-        throw new RuntimeException("Resources not found");
+        if (bestMatch == null) {
+            status = RequestStatus.NOT_FOUND;
+            throw new RuntimeException("Route not found");
+        }
+
+        if (!bestMatch.getMethods().contains(method)) {
+            status = RequestStatus.METHOD_NOT_ALLOWED;
+            throw new RuntimeException("Method not allowed");
+        }
+
+        return bestMatch;
+
     }
 
     private void analyzeBody() {
@@ -99,10 +115,9 @@ public class HttpRequest {
     }
 
     private void assignHandler() {
-        String path = httpHeader.getPath();
         String method = httpHeader.getMethod().toUpperCase();
 
-        if (path.contains("/cgi-bin/") || path.endsWith(".py")) {
+        if (route.getCgi() != null) {
             this.setHnadler(new CgiHandler());
             return;
         }
@@ -123,6 +138,28 @@ public class HttpRequest {
         }
 
         this.setHnadler(new StaticFileHandler());
+    }
+
+    public String resolveFilePath() {
+
+        String requestPath = httpHeader.getPath();
+        String routePath = route.getPath();
+        String root = route.getRoot();
+
+        String relativePath = requestPath.substring(routePath.length());
+        if (relativePath.isEmpty() || relativePath.equals("/")) {
+            if (route.getIndex() != null)
+                return root + "/" + route.getIndex();
+        }
+
+        return root + relativePath;
+    }
+
+    public void executeHandler(ClientHandler client) throws Exception {
+        if (hnadler == null)
+            throw new RuntimeException("No handler assigned");
+
+        hnadler.handle(this, client);
     }
 
     public Long getContentLength() {

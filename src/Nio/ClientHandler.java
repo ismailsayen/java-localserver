@@ -29,44 +29,39 @@ public class ClientHandler {
         this.bodyAccumulator = new ByteArrayOutputStream();
     }
 
-        public void read() throws IOException {
-            this.lastActivity = System.currentTimeMillis();
-            int bytesRead = this.client.read(bufferReader);
+    public void read() throws IOException {
+        this.lastActivity = System.currentTimeMillis();
+        int bytesRead = this.client.read(bufferReader);
 
-            if (bytesRead == -1) {
-                this.client.close();
-                return;
-            }
-            if (bytesRead == 0)
-                return;
-
-            this.totalByteRead += bytesRead;
-            this.bufferReader.flip();
-            byte[] data = new byte[bufferReader.remaining()];
-            bufferReader.get(data);
-            this.bodyAccumulator.write(data);
-            bufferReader.clear();
-
-            if (!headersFounded) {
-                parseHeaders();
-            }
-
-            if (headersFounded) {
-                if (this.httpRequest.getStatus() == RequestStatus.READY) {
-                    
-                    httpRequest.getHnadler().write();
-                } 
-                 if (this.httpRequest.getStatus() == RequestStatus.PROCESSING) {
-                    
-                    httpRequest.getHnadler().read();
-                    
-                    // if (this.bodyAccumulator.size() >= this.contentLength) {
-                    //     String body = new String(bodyAccumulator.toByteArray());
-                    //     System.out.println(body);
-                    // }
-                }
-            }
+        if (bytesRead == -1) {
+            this.client.close();
+            return;
         }
+        if (bytesRead == 0)
+            return;
+
+        this.totalByteRead += bytesRead;
+        this.bufferReader.flip();
+        byte[] data = new byte[bufferReader.remaining()];
+        bufferReader.get(data);
+        this.bodyAccumulator.write(data);
+        bufferReader.clear();
+
+        if (!headersFounded) {
+            parseHeaders();
+        }
+
+        if (headersFounded) {
+           
+                try {
+                    httpRequest.executeHandler(this);         
+                } catch (Exception e) {
+                    System.out.println("error");
+                    client.close();
+                }
+            
+        }
+    }
 
     private void parseHeaders() {
         byte[] fullData = bodyAccumulator.toByteArray();
@@ -94,7 +89,6 @@ public class ClientHandler {
             }
             this.totalByteRead = bodyTotal;
         }
-
     }
 
     private void sendHelloResponse() throws IOException {

@@ -1,7 +1,8 @@
 package handlers;
 
+import Nio.ClientHandler;
 import http.HttpHandler;
-import http.HttpResponse;
+import http.HttpRequest;
 
 public class MultipartHandler implements HttpHandler {
 
@@ -17,12 +18,11 @@ public class MultipartHandler implements HttpHandler {
        System.out.println("Unimplemented method 'write' MultipartHandler");
     }
 
-    @Override
-    public HttpResponse handel() {
-        // TODO Auto-generated method stub
-       System.out.println("Unimplemented method 'handel' MultipartHandler");
-       return null;
 
+    @Override
+    public void handle(HttpRequest request, ClientHandler client) throws Exception {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'handle'");
     }
     
 }
