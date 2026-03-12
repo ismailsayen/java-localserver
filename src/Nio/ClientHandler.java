@@ -25,7 +25,7 @@ public class ClientHandler {
         this.client = client;
         this.virtualHosts = virtualHosts;
         this.headersFounded = false;
-        this.bufferReader = ByteBuffer.allocate(1024);
+        this.bufferReader = ByteBuffer.allocate(2000);
         this.bodyAccumulator = new ByteArrayOutputStream();
     }
 
@@ -39,6 +39,12 @@ public class ClientHandler {
         }
         if (bytesRead == 0)
             return;
+        if (bytesRead == -1) {
+            this.client.close();
+            return;
+        }
+        if (bytesRead == 0)
+            return;
 
         this.totalByteRead += bytesRead;
         this.bufferReader.flip();
@@ -46,11 +52,11 @@ public class ClientHandler {
         bufferReader.get(data);
         this.bodyAccumulator.write(data);
         bufferReader.clear();
-
+    
         if (!headersFounded) {
             parseHeaders();
         }
-
+       
         if (headersFounded) {
            
                 try {
