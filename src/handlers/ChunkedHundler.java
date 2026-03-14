@@ -5,7 +5,7 @@ import http.HttpHandler;
 
 public class ChunkedHundler implements HttpHandler {
 
-    private ClientHandler client;
+    private final ClientHandler client;
 
     public ChunkedHundler(ClientHandler client) {
         this.client = client;

@@ -11,7 +11,7 @@ import handlers.StaticFileHandler;
 
 public class HttpRequest {
 
-    private HttpHeader httpHeader;
+    private final HttpHeader httpHeader;
     private RequestStatus status = RequestStatus.READY;
     private Long contentLength = 0L;
     private boolean chnked = false;
@@ -149,7 +149,6 @@ public class HttpRequest {
         String requestPath = httpHeader.getPath();
         String routePath = route.getPath();
         String root = route.getRoot();
-
         String relativePath = requestPath.substring(routePath.length());
         if (relativePath.isEmpty() || relativePath.equals("/")) {
             if (route.getIndex() != null)

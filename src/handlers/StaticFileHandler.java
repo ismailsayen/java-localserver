@@ -3,7 +3,6 @@ package handlers;
 import DTO.Route;
 import Nio.ClientHandler;
 import http.HttpHandler;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -11,7 +10,7 @@ import java.nio.file.Path;
 
 public class StaticFileHandler implements HttpHandler {
 
-    private ClientHandler client;
+    private final ClientHandler client;
 
     public StaticFileHandler(ClientHandler client) {
         this.client = client;
@@ -28,7 +27,6 @@ public class StaticFileHandler implements HttpHandler {
         if (Files.isDirectory(file)) {
 
             Route rt = this.client.getHttpRequest().getRoute();
-            System.out.println(rt);
             if (rt.getIndex() != null) {
                 Path indexFile = file.resolve(rt.getIndex());
 
@@ -40,7 +38,7 @@ public class StaticFileHandler implements HttpHandler {
             }
 
             if (rt.getDirectoryListing()) {
-                String html = generateDirectoryListing(file.toFile(), rt.getPath());
+                String html = generateDirectoryListing(file.toFile(),rt);
                 sendResponse(200, "text/html", html.getBytes());
                 return;
             }
@@ -58,22 +56,20 @@ public class StaticFileHandler implements HttpHandler {
         sendResponse(200, contentType, body);
     }
 
-    private String generateDirectoryListing(java.io.File directory, String requestPath) {
+    private String generateDirectoryListing(java.io.File directory, Route rt) {
         StringBuilder html = new StringBuilder();
-
+        String reqPath=rt.getPath().replaceAll("/", "\\\\")+directory.getPath().substring(rt.getRoot().length());
         html.append("<html><body>");
-        html.append("<h1>Index of ").append(requestPath).append("</h1>");
+        html.append("<h1>Index of ").append(reqPath).append("</h1>");
 
         java.io.File[] files = directory.listFiles();
-
+        
         if (files != null) {
             for (java.io.File file : files) {
-
+                
                 String name = file.getName();
-                String link = requestPath.endsWith("/")
-                        ? requestPath + name
-                        : requestPath + "/" + name;
-
+                String link = reqPath+"/"+name;
+                
                 if (file.isDirectory()) {
                     name += "/";
                     link += "/";
