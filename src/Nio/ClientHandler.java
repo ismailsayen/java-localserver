@@ -12,113 +12,70 @@ import java.nio.charset.StandardCharsets;
 public class ClientHandler {
     private SocketChannel client;
     private Server virtualHosts;
-    private Long lastActivity;
-    private ByteArrayOutputStream bodyAccumulator;
-    private Boolean headersFounded;
-    private ByteBuffer bufferReader;
     private HttpRequest httpRequest;
-    private int totalByteRead = 0;
-    private Long contentLength = 0L;
+    private HttpHeader headerHttp;
+    private Boolean isHeadersFound = false;
 
     public ClientHandler(SocketChannel client, Server virtualHosts) {
         this.client = client;
         this.virtualHosts = virtualHosts;
-        this.headersFounded = false;
-        this.bufferReader = ByteBuffer.allocate(2000);
-        this.bodyAccumulator = new ByteArrayOutputStream();
     }
 
-    public void read() throws IOException {
-        this.lastActivity = System.currentTimeMillis();
-        int bytesRead = this.client.read(bufferReader);
+    public void readHttpMessage() throws IOException {
+        ByteBuffer buf = ByteBuffer.allocate(60);
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
-        if (bytesRead == -1) {
+        int bytesRead = this.client.read(buf);
+        if (bytesRead <= 0) {
             this.client.close();
             return;
         }
-        if (bytesRead == 0)
-            return;
-        if (bytesRead == -1) {
-            this.client.close();
-            return;
-        }
-        if (bytesRead == 0)
-            return;
 
-        this.totalByteRead += bytesRead;
-        this.bufferReader.flip();
-        byte[] data = new byte[bufferReader.remaining()];
-        bufferReader.get(data);
-        this.bodyAccumulator.write(data);
-        bufferReader.clear();
+        while (bytesRead > 0) {
+            buf.flip();
 
-        if (!headersFounded) {
-            parseHeaders();
-        }
-
-        if (headersFounded) {
-
-            try {
-                httpRequest.executeHandler(this);
-            } catch (Exception e) {
-                System.out.println(e);
-                client.close();
+            byteArrayOutputStream.write(buf.array(), 0, bytesRead);
+            if (!this.isHeadersFound) {
+                this.readHeaders(byteArrayOutputStream);
+            } else {
+                this.readBody(byteArrayOutputStream);
             }
 
+            buf.clear();
+            bytesRead = this.client.read(buf);
         }
+
+        try {
+            this.httpRequest.setBody(byteArrayOutputStream.toByteArray());
+            this.httpRequest.executeHandler(this);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        client.close();
     }
 
-    private void parseHeaders() {
-        byte[] fullData = bodyAccumulator.toByteArray();
-        String req = new String(fullData, StandardCharsets.UTF_8);
-        int index = req.indexOf("\r\n\r\n");
+    public void readHeaders(ByteArrayOutputStream byteArrayOutputStream) {
+        byte[] data = byteArrayOutputStream.toByteArray();
+        String message = new String(data, StandardCharsets.UTF_8);
+        int index = message.indexOf("\r\n\r\n");
 
         if (index != -1) {
-            HttpHeader headerHttp = HttpHeader.parseHeaders(req.substring(0, index));
+            this.isHeadersFound = true;
+            this.headerHttp = HttpHeader.parseHeaders(message.substring(0, index));
             this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
             try {
                 this.httpRequest.HandleRequest();
             } catch (Exception e) {
-                
                 return;
             }
-            this.contentLength = (long) httpRequest.getContentLength();
-            this.headersFounded = true;
 
-            int bodyStart = index + 4;
-            int bodyTotal = fullData.length - bodyStart;
-
-            bodyAccumulator.reset();
-            if (bodyTotal > 0) {
-                bodyAccumulator.write(fullData, bodyStart, bodyTotal);
-            }
-            this.totalByteRead = bodyTotal;
+            byteArrayOutputStream.reset();
+            byteArrayOutputStream.write(data, index + 4, data.length - (index + 4));
         }
     }
 
+    public void readBody(ByteArrayOutputStream byteArrayOutputStream) {
 
-    public void sendResponse(int status, String contentType, byte[] body) throws IOException {
-
-        String statusLine = "HTTP/1.1 " + status + " OK\r\n";
-
-        String headers = "Content-Type: " + contentType + "\r\n" +
-                "Content-Length: " + body.length + "\r\n" +
-                "Connection: close\r\n\r\n";
-
-        byte[] headerBytes = (statusLine + headers).getBytes();
-
-        ByteBuffer buffer = ByteBuffer.allocate(headerBytes.length + body.length);
-
-        buffer.put(headerBytes);
-        buffer.put(body);
-
-        buffer.flip();
-
-        while (buffer.hasRemaining()) {
-            client.write(buffer);
-        }
-
-        client.close();
     }
 
     public SocketChannel getClient() {
@@ -135,30 +92,6 @@ public class ClientHandler {
 
     public void setVirtualHosts(Server virtualHosts) {
         this.virtualHosts = virtualHosts;
-    }
-
-    public Long getLastActivity() {
-        return lastActivity;
-    }
-
-    public void setLastActivity(Long lastActivity) {
-        this.lastActivity = lastActivity;
-    }
-
-    public ByteBuffer getBuffer() {
-        return bufferReader;
-    }
-
-    public void setBuffer(ByteBuffer bufferReader) {
-        this.bufferReader = bufferReader;
-    }
-
-    public ByteArrayOutputStream getByteArrayOutputStream() {
-        return bodyAccumulator;
-    }
-
-    public void setByteArrayOutputStream(ByteArrayOutputStream bodyAccumulator) {
-        this.bodyAccumulator = bodyAccumulator;
     }
 
     public HttpRequest getHttpRequest() {
