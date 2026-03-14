@@ -15,6 +15,7 @@ public class ClientHandler {
     private HttpRequest httpRequest;
     private HttpHeader headerHttp;
     private Boolean isHeadersFound = false;
+    private Boolean isBodyFound = false;
 
     public ClientHandler(SocketChannel client, Server virtualHosts) {
         this.client = client;
@@ -42,7 +43,16 @@ public class ClientHandler {
             }
 
             buf.clear();
+
+            if (this.isBodyFound) {
+                break;
+            }
+
             bytesRead = this.client.read(buf);
+        }
+
+        if (!this.isBodyFound) {
+            this.readBody(byteArrayOutputStream);
         }
 
         try {
@@ -75,7 +85,17 @@ public class ClientHandler {
     }
 
     public void readBody(ByteArrayOutputStream byteArrayOutputStream) {
+        String contentLength = this.headerHttp.getHeaders().get("content-length");
 
+        if (contentLength != null) {
+            int cl = Integer.parseInt(contentLength);
+            if (byteArrayOutputStream.size() >= cl) {
+                byte[] data = byteArrayOutputStream.toByteArray();
+                this.isBodyFound = true;
+                byteArrayOutputStream.reset();
+                byteArrayOutputStream.write(data, 0, cl);
+            }
+        }
     }
 
     @Override
