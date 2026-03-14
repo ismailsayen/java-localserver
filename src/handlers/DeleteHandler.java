@@ -5,7 +5,7 @@ import http.HttpHandler;
 
 public class DeleteHandler implements HttpHandler {
 
-    private ClientHandler client;
+    private final ClientHandler client;
 
     public DeleteHandler(ClientHandler client) {
         this.client = client;

@@ -5,7 +5,7 @@ import http.HttpHandler;
 
 public class RedirectHandler implements HttpHandler {
 
-    private ClientHandler client;
+    private final ClientHandler client;
 
     public RedirectHandler(ClientHandler client) {
         this.client = client;

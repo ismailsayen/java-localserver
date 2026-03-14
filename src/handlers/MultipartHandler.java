@@ -5,7 +5,7 @@ import http.HttpHandler;
 
 public class MultipartHandler implements HttpHandler {
 
-    private ClientHandler client;
+    private final ClientHandler client;
 
     public MultipartHandler(ClientHandler client) {
         this.client = client;

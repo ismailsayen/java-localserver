@@ -5,7 +5,7 @@ import http.HttpHandler;
 
 public class CgiHandler implements HttpHandler {
 
-    private ClientHandler client;
+    private final ClientHandler client;
 
     public CgiHandler(ClientHandler client) {
         this.client = client;

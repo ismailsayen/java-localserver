@@ -21,7 +21,7 @@
       
       {
         "path": "/www",
-        "root": "./www/html/primary",
+        "root": "./www/html",
         "methods": ["GET"],
         "directoryListing": true
       }
