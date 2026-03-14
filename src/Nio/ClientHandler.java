@@ -3,7 +3,6 @@ package Nio;
 import DTO.Server;
 import http.HttpHeader;
 import http.HttpRequest;
-import http.RequestStatus;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -52,20 +51,20 @@ public class ClientHandler {
         bufferReader.get(data);
         this.bodyAccumulator.write(data);
         bufferReader.clear();
-    
+
         if (!headersFounded) {
             parseHeaders();
         }
-       
+
         if (headersFounded) {
-           
-                try {
-                    httpRequest.executeHandler(this);         
-                } catch (Exception e) {
-                    System.out.println("error");
-                    client.close();
-                }
-            
+
+            try {
+                httpRequest.executeHandler(this);
+            } catch (Exception e) {
+                System.out.println(e);
+                client.close();
+            }
+
         }
     }
 
@@ -80,7 +79,7 @@ public class ClientHandler {
             try {
                 this.httpRequest.HandleRequest();
             } catch (Exception e) {
-                System.out.println("=>>>>>>>" + e.getMessage());
+                
                 return;
             }
             this.contentLength = (long) httpRequest.getContentLength();
@@ -97,30 +96,28 @@ public class ClientHandler {
         }
     }
 
-    private void sendHelloResponse() throws IOException {
-        String html = "<html><body><h1>wa Akhiiiiiiiiiiiiran </h1></body></html>";
-        byte[] bodyBytes = html.getBytes(StandardCharsets.UTF_8);
 
-        // Utilisation d'une String simple pour éviter les problèmes d'indentation des
-        // Text Blocks
-        String responseHeader = """
-                HTTP/1.1 200 OK\r
-                Content-Type: text/html\r
-                Content-Length: """ + bodyBytes.length + "\r\n" +
-                "Connection: close\r\n" +
-                "\r\n";
+    public void sendResponse(int status, String contentType, byte[] body) throws IOException {
 
-        byte[] headerBytes = responseHeader.getBytes(StandardCharsets.UTF_8);
-        ByteBuffer respBuffer = ByteBuffer.allocate(headerBytes.length + bodyBytes.length);
-        respBuffer.put(headerBytes);
-        respBuffer.put(bodyBytes);
-        respBuffer.flip();
+        String statusLine = "HTTP/1.1 " + status + " OK\r\n";
 
-        while (respBuffer.hasRemaining()) {
-            client.write(respBuffer);
+        String headers = "Content-Type: " + contentType + "\r\n" +
+                "Content-Length: " + body.length + "\r\n" +
+                "Connection: close\r\n\r\n";
+
+        byte[] headerBytes = (statusLine + headers).getBytes();
+
+        ByteBuffer buffer = ByteBuffer.allocate(headerBytes.length + body.length);
+
+        buffer.put(headerBytes);
+        buffer.put(body);
+
+        buffer.flip();
+
+        while (buffer.hasRemaining()) {
+            client.write(buffer);
         }
 
-        // System.out.println("Réponse envoyée, fermeture du client.");
         client.close();
     }
 

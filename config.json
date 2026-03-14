@@ -2,7 +2,7 @@
   {
     "name": "primary.local",
     "host": "127.0.0.1",
-    "port": [8081,8023],
+    "port": [8081, 8023],
     "defaultServer": true,
     "limitSize": 1024,
     "routes": [
@@ -10,7 +10,7 @@
         "path": "/",
         "root": "./www/html/primary",
         "methods": ["GET"],
-        "index": "index.html"
+        "index": "testjpg.jpg"
       },
       {
         "path": "/cgi-bin",
@@ -18,17 +18,12 @@
         "methods": ["GET", "POST"],
         "cgiExtension": ".py"
       },
+      
       {
         "path": "/www",
         "root": "./www/html/primary",
         "methods": ["GET"],
-        "index": "index.html"
-      },
-      {
-        "path": "/www",
-        "root": "./www/html/primary",
-        "methods": ["GET"],
-        "directoryListening": true
+        "directoryListing": true
       }
     ]
   }

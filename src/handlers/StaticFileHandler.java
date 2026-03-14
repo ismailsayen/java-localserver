@@ -1,12 +1,11 @@
 package handlers;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-
+import DTO.Route;
 import Nio.ClientHandler;
 import http.HttpHandler;
 import http.HttpRequest;
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class StaticFileHandler implements HttpHandler {
 
@@ -26,12 +25,74 @@ public class StaticFileHandler implements HttpHandler {
         String filePath = request.resolveFilePath();
 
         Path file = Path.of(filePath);
-
         if (!Files.exists(file)) {
-            System.out.println("===>" + filePath);
-            return;
+            throw new Exception("no Path:" + filePath);
         }
-        System.out.println("+++++" + Files.isDirectory(file));
+        if (Files.isDirectory(file)) {
+
+            Route rt = request.getRoute();
+            System.out.println(rt);
+            if (rt.getIndex() != null) {
+                Path indexFile = file.resolve(rt.getIndex());
+
+                if (Files.exists(indexFile)) {
+                    byte[] body = Files.readAllBytes(indexFile);
+                    client.sendResponse(200, "text/html", body);
+                    return;
+                }
+            }
+
+            if (rt.getDirectoryListing()) {
+                String html = generateDirectoryListing(file.toFile(), rt.getPath());
+                client.sendResponse(200, "text/html", html.getBytes());
+                return;
+            }
+
+            throw new Exception("Directory listing forbidden");
+
+        }
+
+        byte[] body = Files.readAllBytes(file);
+
+        String contentType = Files.probeContentType(file);
+        if (contentType == null)
+            contentType = "application/octet-stream";
+
+        client.sendResponse(200, contentType, body);
     }
+
+private String generateDirectoryListing(java.io.File directory, String requestPath) {
+    StringBuilder html = new StringBuilder();
+
+    html.append("<html><body>");
+    html.append("<h1>Index of ").append(requestPath).append("</h1>");
+
+    java.io.File[] files = directory.listFiles();
+
+    if (files != null) {
+        for (java.io.File file : files) {
+
+            String name = file.getName();
+            String link = requestPath.endsWith("/") 
+                    ? requestPath + name 
+                    : requestPath + "/" + name;
+
+            if (file.isDirectory()) {
+                name += "/";
+                link += "/";
+            }
+
+            html.append("<a href=\"")
+                .append(link)
+                .append("\">")
+                .append(name)
+                .append("</a><br>");
+        }
+    }
+
+    html.append("</body></html>");
+
+    return html.toString();
+}
 
 }

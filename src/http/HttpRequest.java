@@ -149,6 +149,7 @@ public class HttpRequest {
         String relativePath = requestPath.substring(routePath.length());
         if (relativePath.isEmpty() || relativePath.equals("/")) {
             if (route.getIndex() != null)
+                
                 return root + "/" + route.getIndex();
         }
 
