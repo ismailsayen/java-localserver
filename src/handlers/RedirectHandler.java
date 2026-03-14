@@ -1,24 +1,21 @@
 package handlers;
 
-import java.io.IOException;
-
 import Nio.ClientHandler;
 import http.HttpHandler;
-import http.HttpRequest;
 
 public class RedirectHandler implements HttpHandler {
-    
+
+    private ClientHandler client;
+
+    public RedirectHandler(ClientHandler client) {
+        this.client = client;
+    }
 
     @Override
-    public void handle(HttpRequest request, ClientHandler client) throws Exception {
+    public void handle() throws Exception {
         // TODO Auto-generated method stub
+        System.out.println(this.client);
         throw new UnsupportedOperationException("Unimplemented method 'handle'");
     }
 
-    @Override
-    public void sendResponse(int status, String contentType, byte[] responseBody) throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'sendResponse'");
-    }
-    
 }

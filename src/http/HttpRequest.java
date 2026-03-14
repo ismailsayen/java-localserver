@@ -2,9 +2,11 @@ package http;
 
 import DTO.Route;
 import DTO.Server;
+import Nio.ClientHandler;
 import handlers.CgiHandler;
 import handlers.DeleteHandler;
 import handlers.MultipartHandler;
+import handlers.RedirectHandler;
 import handlers.StaticFileHandler;
 
 public class HttpRequest {
@@ -18,53 +20,59 @@ public class HttpRequest {
     private HttpHandler hnadler;
     private Server server;
     private Route route;
+    private byte[] body;
 
     public HttpRequest(HttpHeader httpHeader, Server server) {
         this.httpHeader = httpHeader;
         this.server = server;
     }
 
-    public void HandleRequest() {
-        Route route = this.extractRoute();
-        validatePayloadMethod();
+    public void HandleRequest(ClientHandler client) {
+        this.route = this.extractRoute();
+        if (status != RequestStatus.READY)
+            return;
+
+        if (route.getRedirectTo() != null) {
+            this.setHnadler(new RedirectHandler(client));
+            return;
+        }
+
+        analyzeBody();
+        assignHandler(client);
     }
 
     private Route extractRoute() {
-        String method = this.httpHeader.getMethod().toUpperCase();
-        String path = this.httpHeader.getPath();
+        String method = httpHeader.getMethod().toUpperCase();
+        String requestPath = httpHeader.getPath();
 
-        for (Route route : this.server.getRoutes()) {
-            if (!route.getPath().equals(path))
+        Route bestMatch = null;
+        int longestMatch = -1;
+
+        for (Route r : server.getRoutes()) {
+
+            String routePath = r.getPath();
+
+            if (!requestPath.startsWith(routePath))
                 continue;
 
-            if (!route.getMethods().contains(method)) {
-                this.status = RequestStatus.METHOD_NOT_ALLOWED;
-                throw new RuntimeException("Method not allowed");
+            if (routePath.length() > longestMatch) {
+                bestMatch = r;
+                longestMatch = routePath.length();
             }
-
-            return route;
         }
 
-        this.status = RequestStatus.NOT_FOUND;
-        throw new RuntimeException("Resources not found");
-    }
-
-    private void validatePayloadMethod() {
-        String cl = httpHeader.getHeaders().get("content-length");
-        String te = httpHeader.getHeaders().get("transfer-encoding");
-
-        if (cl == null && te == null) {
-
-            this.status = (httpHeader.getMethod().toUpperCase().equals("POST")) ? RequestStatus.ERROR
-                    : RequestStatus.READY;
-        } else if (cl != null) {
-            this.contentLength = Long.valueOf(cl);
-            this.status = (this.contentLength == 0) ? RequestStatus.READY : RequestStatus.PROCESSING;
-        } else {
-            this.chnked = true;
-            this.status = RequestStatus.PROCESSING;
+        if (bestMatch == null) {
+            status = RequestStatus.NOT_FOUND;
+            throw new RuntimeException("Route not found");
         }
-        extractMultipartDetails();
+
+        if (!bestMatch.getMethods().contains(method)) {
+            status = RequestStatus.METHOD_NOT_ALLOWED;
+            throw new RuntimeException("Method not allowed");
+        }
+
+        return bestMatch;
+
     }
 
     private void extractMultipartDetails() {
@@ -83,32 +91,72 @@ public class HttpRequest {
         }
     }
 
-    private void assignHandler() {
+    private void analyzeBody() {
+        String cl = httpHeader.getHeaders().get("content-length");
+        String te = httpHeader.getHeaders().get("transfer-encoding");
+
+        if (cl == null && te == null) {
+            if (httpHeader.getMethod().equalsIgnoreCase("POST"))
+                status = RequestStatus.ERROR;
+
+            return;
+        } else if (cl != null) {
+            this.contentLength = Long.valueOf(cl);
+            this.status = (this.contentLength == 0) ? RequestStatus.READY : RequestStatus.PROCESSING;
+        } else {
+            this.chnked = true;
+            this.status = RequestStatus.PROCESSING;
+        }
+        extractMultipartDetails();
+    }
+
+    private void assignHandler(ClientHandler client) {
         String path = httpHeader.getPath();
         String method = httpHeader.getMethod().toUpperCase();
         if (path.contains("/cgi-bin/") || path.endsWith(".py") || path.endsWith(".php")) {
-            this.setHnadler(new CgiHandler());
+            this.setHnadler(new CgiHandler(client));
             return;
         }
 
         // 2. Détection Multipart
         if (this.isMultipart) {
-            this.setHnadler(new MultipartHandler());
+            this.setHnadler(new MultipartHandler(client));
             return;
         }
 
         if (method.equals("DELETE")) {
-            this.setHnadler(new DeleteHandler());
+            this.setHnadler(new DeleteHandler(client));
             return;
         }
 
         // 3. Cas Statique (GET / DELETE)
         if (method.equals("GET")) {
-            this.setHnadler(new StaticFileHandler());
+            this.setHnadler(new StaticFileHandler(client));
             return;
         }
 
-        this.setHnadler(new StaticFileHandler());
+        this.setHnadler(new StaticFileHandler(client));
+    }
+
+    public void executeHandler(ClientHandler client) throws Exception {
+        if (hnadler == null)
+            throw new RuntimeException("No handler assigned");
+
+        hnadler.handle();
+    }
+
+    public String resolveFilePath() {
+        String requestPath = httpHeader.getPath();
+        String routePath = route.getPath();
+        String root = route.getRoot();
+
+        String relativePath = requestPath.substring(routePath.length());
+        if (relativePath.isEmpty() || relativePath.equals("/")) {
+            if (route.getIndex() != null)
+                return root + "/" + route.getIndex();
+        }
+
+        return root + relativePath;
     }
 
     public Long getContentLength() {
@@ -165,5 +213,13 @@ public class HttpRequest {
 
     public void setRoute(Route route) {
         this.route = route;
+    }
+
+    public byte[] getBody() {
+        return this.body;
+    }
+
+    public void setBody(byte[] body) {
+        this.body = body;
     }
 }

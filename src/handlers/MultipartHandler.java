@@ -1,25 +1,21 @@
 package handlers;
 
-import java.io.IOException;
-
 import Nio.ClientHandler;
 import http.HttpHandler;
-import http.HttpRequest;
 
 public class MultipartHandler implements HttpHandler {
 
-   
+    private ClientHandler client;
 
-    @Override
-    public void handle(HttpRequest request, ClientHandler client) throws Exception {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'handle'");
+    public MultipartHandler(ClientHandler client) {
+        this.client = client;
     }
 
     @Override
-    public void sendResponse(int status, String contentType, byte[] responseBody) throws IOException {
+    public void handle() throws Exception {
         // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'sendResponse'");
+        System.out.println(this.client);
+        throw new UnsupportedOperationException("Unimplemented method 'handle'");
     }
 
 }

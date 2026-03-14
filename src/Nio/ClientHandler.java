@@ -64,7 +64,7 @@ public class ClientHandler {
             this.headerHttp = HttpHeader.parseHeaders(message.substring(0, index));
             this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
             try {
-                this.httpRequest.HandleRequest();
+                this.httpRequest.HandleRequest(this);
             } catch (Exception e) {
                 return;
             }
@@ -76,6 +76,11 @@ public class ClientHandler {
 
     public void readBody(ByteArrayOutputStream byteArrayOutputStream) {
 
+    }
+
+    @Override
+    public String toString() {
+        return "Hello client";
     }
 
     public SocketChannel getClient() {

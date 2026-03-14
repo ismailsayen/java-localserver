@@ -3,19 +3,23 @@ package handlers;
 import DTO.Route;
 import Nio.ClientHandler;
 import http.HttpHandler;
-import http.HttpRequest;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class StaticFileHandler implements HttpHandler {
-    
+
+    private ClientHandler client;
+
+    public StaticFileHandler(ClientHandler client) {
+        this.client = client;
+    }
+
     @Override
-    public void handle(HttpRequest request, ClientHandler client) throws Exception {
-        String filePath = request.resolveFilePath();
+    public void handle() throws Exception {
+        String filePath = this.client.getHttpRequest().resolveFilePath();
 
         Path file = Path.of(filePath);
         if (!Files.exists(file)) {
@@ -23,7 +27,7 @@ public class StaticFileHandler implements HttpHandler {
         }
         if (Files.isDirectory(file)) {
 
-            Route rt = request.getRoute();
+            Route rt = this.client.getHttpRequest().getRoute();
             System.out.println(rt);
             if (rt.getIndex() != null) {
                 Path indexFile = file.resolve(rt.getIndex());
@@ -88,7 +92,6 @@ public class StaticFileHandler implements HttpHandler {
         return html.toString();
     }
 
-    @Override
     public void sendResponse(int status, String contentType, byte[] responseBody) throws IOException {
 
         String statusLine = "HTTP/1.1 " + status + " OK\r\n";
@@ -107,10 +110,10 @@ public class StaticFileHandler implements HttpHandler {
         buffer.flip();
 
         while (buffer.hasRemaining()) {
-            client.write(buffer);
+            this.client.getClient().write(buffer);
         }
 
-        client.close();
+        this.client.getClient().close();
     }
 
 }
