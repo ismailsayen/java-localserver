@@ -49,7 +49,7 @@ public class NioServer {
 
     private void handleRead(SelectionKey key) throws IOException {
         ClientHandler client = (ClientHandler) key.attachment();
-        client.read();
+        client.readHttpMessage();
     }
 
     private void createTcpListeners(List<Server> serverConfig) throws IOException {

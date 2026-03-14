@@ -23,6 +23,7 @@ public class HttpRequest {
     private HttpHandler hnadler;
     private Server server;
     private Route route;
+    private byte[] body;
 
     public HttpRequest(HttpHeader httpHeader, Server server) {
         this.httpHeader = httpHeader;
@@ -232,5 +233,13 @@ public class HttpRequest {
 
     public void setHttpHeader(HttpHeader httpHeader) {
         this.httpHeader = httpHeader;
+    }
+
+    public byte[] getBody() {
+        return this.body;
+    }
+
+    public void setBody(byte[] body) {
+        this.body = body;
     }
 }
