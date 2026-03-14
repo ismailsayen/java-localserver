@@ -4,22 +4,15 @@ import DTO.Route;
 import Nio.ClientHandler;
 import http.HttpHandler;
 import http.HttpRequest;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class StaticFileHandler implements HttpHandler {
-
-    @Override
-    public void read() {
-        // TODO Auto-generated method stub
-        System.out.println("Unimplemented method 'read'  StaticFile");
-    }
-
-    @Override
-    public void write() {
-        System.out.println(" write static File");
-    }
-
+    
     @Override
     public void handle(HttpRequest request, ClientHandler client) throws Exception {
         String filePath = request.resolveFilePath();
@@ -37,14 +30,14 @@ public class StaticFileHandler implements HttpHandler {
 
                 if (Files.exists(indexFile)) {
                     byte[] body = Files.readAllBytes(indexFile);
-                    client.sendResponse(200, "text/html", body);
+                    sendResponse(200, "text/html", body);
                     return;
                 }
             }
 
             if (rt.getDirectoryListing()) {
                 String html = generateDirectoryListing(file.toFile(), rt.getPath());
-                client.sendResponse(200, "text/html", html.getBytes());
+                sendResponse(200, "text/html", html.getBytes());
                 return;
             }
 
@@ -58,41 +51,66 @@ public class StaticFileHandler implements HttpHandler {
         if (contentType == null)
             contentType = "application/octet-stream";
 
-        client.sendResponse(200, contentType, body);
+        sendResponse(200, contentType, body);
     }
 
-private String generateDirectoryListing(java.io.File directory, String requestPath) {
-    StringBuilder html = new StringBuilder();
+    private String generateDirectoryListing(java.io.File directory, String requestPath) {
+        StringBuilder html = new StringBuilder();
 
-    html.append("<html><body>");
-    html.append("<h1>Index of ").append(requestPath).append("</h1>");
+        html.append("<html><body>");
+        html.append("<h1>Index of ").append(requestPath).append("</h1>");
 
-    java.io.File[] files = directory.listFiles();
+        java.io.File[] files = directory.listFiles();
 
-    if (files != null) {
-        for (java.io.File file : files) {
+        if (files != null) {
+            for (java.io.File file : files) {
 
-            String name = file.getName();
-            String link = requestPath.endsWith("/") 
-                    ? requestPath + name 
-                    : requestPath + "/" + name;
+                String name = file.getName();
+                String link = requestPath.endsWith("/")
+                        ? requestPath + name
+                        : requestPath + "/" + name;
 
-            if (file.isDirectory()) {
-                name += "/";
-                link += "/";
+                if (file.isDirectory()) {
+                    name += "/";
+                    link += "/";
+                }
+
+                html.append("<a href=\"")
+                        .append(link)
+                        .append("\">")
+                        .append(name)
+                        .append("</a><br>");
             }
-
-            html.append("<a href=\"")
-                .append(link)
-                .append("\">")
-                .append(name)
-                .append("</a><br>");
         }
+
+        html.append("</body></html>");
+
+        return html.toString();
     }
 
-    html.append("</body></html>");
+    @Override
+    public void sendResponse(int status, String contentType, byte[] responseBody) throws IOException {
 
-    return html.toString();
-}
+        String statusLine = "HTTP/1.1 " + status + " OK\r\n";
+
+        String headers = "Content-Type: " + contentType + "\r\n" +
+                "Content-Length: " + responseBody.length + "\r\n" +
+                "Connection: close\r\n\r\n";
+
+        byte[] headerBytes = (statusLine + headers).getBytes();
+
+        ByteBuffer buffer = ByteBuffer.allocate(headerBytes.length + responseBody.length);
+
+        buffer.put(headerBytes);
+        buffer.put(responseBody);
+
+        buffer.flip();
+
+        while (buffer.hasRemaining()) {
+            client.write(buffer);
+        }
+
+        client.close();
+    }
 
 }
