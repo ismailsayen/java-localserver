@@ -1,6 +1,7 @@
 package handlers;
 
 import java.io.IOException;
+import java.nio.channels.SelectionKey;
 
 import Nio.ClientHandler;
 import http.HttpHandler;
@@ -17,7 +18,7 @@ public class MultipartHandler implements HttpHandler {
     public void handle() throws Exception {
         // TODO Auto-generated method stub
         System.out.println(this.client.getHttpHeader().getHeaders().get("content-type"));
-        throw new UnsupportedOperationException("Unimplemented method 'handle'");
+        this.client.getKey().interestOps(SelectionKey.OP_WRITE);
     }
 
     @Override

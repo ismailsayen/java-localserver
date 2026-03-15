@@ -67,12 +67,13 @@ public class ClientHandler {
         // client.close();
     }
 
-    public void  handleResponse()  throws IOException{
+    public void handleResponse() throws IOException {
         try {
             this.httpRequest.executeResponse(this);
         } catch (IOException e) {
             // TODO: handle exception
         }
+        this.client.close();
     }
 
     public void readHeaders(ByteArrayOutputStream byteArrayOutputStream) {
