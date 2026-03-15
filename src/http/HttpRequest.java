@@ -1,7 +1,5 @@
 package http;
 
-import java.io.IOException;
-
 import DTO.Route;
 import DTO.Server;
 import Nio.ClientHandler;
@@ -10,15 +8,12 @@ import handlers.DeleteHandler;
 import handlers.MultipartHandler;
 import handlers.RedirectHandler;
 import handlers.StaticFileHandler;
+import java.io.IOException;
 
 public class HttpRequest {
 
     private final HttpHeader httpHeader;
     private RequestStatus status = RequestStatus.READY;
-    private Long contentLength = 0L;
-    private boolean chnked = false;
-    private Boolean isMultipart = false;
-    private String boundary;
     private HttpHandler hnadler;
     private Server server;
     private Route route;
@@ -39,7 +34,6 @@ public class HttpRequest {
             return;
         }
 
-        analyzeBody();
         assignHandler(client);
     }
 
@@ -77,51 +71,18 @@ public class HttpRequest {
 
     }
 
-    private void extractMultipartDetails() {
-        String contentType = this.httpHeader.getHeaders().get("content-type");
-        if (contentType != null && contentType.contains("multipart/form-data")) {
-            if (contentType.contains("boundary=")) {
-                this.isMultipart = true;
-                String[] parts = contentType.split("boundary=");
-                if (parts.length > 1) {
-                    this.boundary = parts[1].trim();
-                    if (this.boundary.startsWith("\"") && this.boundary.endsWith("\"")) {
-                        this.boundary = this.boundary.substring(1, this.boundary.length() - 1);
-                    }
-                }
-            }
-        }
-    }
-
-    private void analyzeBody() {
-        String cl = httpHeader.getHeaders().get("content-length");
-        String te = httpHeader.getHeaders().get("transfer-encoding");
-
-        if (cl == null && te == null) {
-            if (httpHeader.getMethod().equalsIgnoreCase("POST"))
-                status = RequestStatus.ERROR;
-
-            return;
-        } else if (cl != null) {
-            this.contentLength = Long.valueOf(cl);
-            this.status = (this.contentLength == 0) ? RequestStatus.READY : RequestStatus.PROCESSING;
-        } else {
-            this.chnked = true;
-            this.status = RequestStatus.PROCESSING;
-        }
-        extractMultipartDetails();
-    }
-
     private void assignHandler(ClientHandler client) {
         String path = httpHeader.getPath();
         String method = httpHeader.getMethod().toUpperCase();
+        String contentType = this.httpHeader.getHeaders().get("content-type");
+
         if (path.contains("/cgi-bin/") || path.endsWith(".py") || path.endsWith(".php")) {
             this.setHnadler(new CgiHandler(client));
             return;
         }
 
         // 2. Détection Multipart
-        if (this.isMultipart) {
+        if (contentType != null && contentType.contains("multipart/form-data")) {
             this.setHnadler(new MultipartHandler(client));
             return;
         }
@@ -167,36 +128,12 @@ public class HttpRequest {
         return root + relativePath;
     }
 
-    public Long getContentLength() {
-        return contentLength;
-    }
-
     public RequestStatus getStatus() {
         return status;
     }
 
     public void setStatus(RequestStatus status) {
         this.status = status;
-    }
-
-    public boolean isChnked() {
-        return chnked;
-    }
-
-    public void setChnked(boolean chnked) {
-        this.chnked = chnked;
-    }
-
-    public Boolean getIsMultipart() {
-        return isMultipart;
-    }
-
-    public void setIsMultipart(Boolean isMultipart) {
-        this.isMultipart = isMultipart;
-    }
-
-    public String getBoundary() {
-        return this.boundary;
     }
 
     public HttpHandler getHnadler() {

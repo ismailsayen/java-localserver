@@ -70,7 +70,7 @@ public class ClientHandler {
     public void  handleResponse()  throws IOException{
         try {
             this.httpRequest.executeResponse(this);
-        } catch (Exception e) {
+        } catch (IOException e) {
             // TODO: handle exception
         }
     }
@@ -136,6 +136,14 @@ public class ClientHandler {
 
     public void setHttpRequest(HttpRequest httpRequest) {
         this.httpRequest = httpRequest;
+    }
+
+    public HttpHeader getHttpHeader() {
+        return headerHttp;
+    }
+
+    public void setHttpHeader(HttpHeader headerHttp) {
+        this.headerHttp = headerHttp;
     }
 
     public SelectionKey getKey() {

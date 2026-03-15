@@ -16,7 +16,7 @@ public class MultipartHandler implements HttpHandler {
     @Override
     public void handle() throws Exception {
         // TODO Auto-generated method stub
-        System.out.println(this.client);
+        System.out.println(this.client.getHttpHeader().getHeaders().get("content-type"));
         throw new UnsupportedOperationException("Unimplemented method 'handle'");
     }
 
@@ -26,3 +26,19 @@ public class MultipartHandler implements HttpHandler {
     }
 
 }
+
+// private void extractMultipartDetails() {
+
+// if () {
+// if (contentType.contains("boundary=")) {
+// this.isMultipart = true;
+// String[] parts = contentType.split("boundary=");
+// if (parts.length > 1) {
+// this.boundary = parts[1].trim();
+// if (this.boundary.startsWith("\"") && this.boundary.endsWith("\"")) {
+// this.boundary = this.boundary.substring(1, this.boundary.length() - 1);
+// }
+// }
+// }
+// }
+// }

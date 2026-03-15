@@ -26,9 +26,7 @@ public class StaticFileHandler implements HttpHandler {
     @Override
     public void handle() throws Exception {
 
-    
-
-
+        
         client.getKey().interestOps(SelectionKey.OP_WRITE);
     }
 
@@ -171,6 +169,5 @@ public class StaticFileHandler implements HttpHandler {
             client.getClient().write(buffer);
         }
 
-        client.getClient().close();
     }
 }
