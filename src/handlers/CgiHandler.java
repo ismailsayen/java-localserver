@@ -1,5 +1,7 @@
 package handlers;
 
+import java.io.IOException;
+
 import Nio.ClientHandler;
 import http.HttpHandler;
 
@@ -16,6 +18,12 @@ public class CgiHandler implements HttpHandler {
         // TODO Auto-generated method stub
         System.out.println(this.client);
         throw new UnsupportedOperationException("Unimplemented method 'handle'");
+    }
+
+    @Override
+    public void response() throws IOException {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'response'");
     }
 
 }

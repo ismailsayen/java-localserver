@@ -1,5 +1,7 @@
 package http;
 
+import java.io.IOException;
+
 import DTO.Route;
 import DTO.Server;
 import Nio.ClientHandler;
@@ -143,6 +145,13 @@ public class HttpRequest {
             throw new RuntimeException("No handler assigned");
 
         hnadler.handle();
+    }
+
+    public void executeResponse(ClientHandler client) throws IOException {
+        if (hnadler == null)
+            throw new RuntimeException("No handler assigned");
+
+        hnadler.response();
     }
 
     public String resolveFilePath() {

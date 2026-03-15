@@ -1,5 +1,7 @@
 package handlers;
 
+import java.io.IOException;
+
 import Nio.ClientHandler;
 import http.HttpHandler;
 
@@ -13,9 +15,11 @@ public class DeleteHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        // TODO Auto-generated method stub
-        System.out.println(this.client);
-        throw new UnsupportedOperationException("Unimplemented method 'handle'");
+       System.out.println("zzzz");
     }
+     @Override
+    public void response() throws IOException {
+    }
+
 
 }

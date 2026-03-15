@@ -1,12 +1,11 @@
 package config.utils;
 
+import DTO.Route;
+import DTO.Server;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.regex.Pattern;
-
-import DTO.Route;
-import DTO.Server;
 
 public class Validators {
 
@@ -108,7 +107,7 @@ public class Validators {
         // ===== directoryListing =====
         if (rt.get("directoryListing") != null) {
 
-            route.setDirectoryListing((Boolean) rt.get("directoryListing"));
+            route.setDirectoryListing((Boolean) rt.getOrDefault("directoryListing",false));
         }
 
         // ===== redirectTo =====

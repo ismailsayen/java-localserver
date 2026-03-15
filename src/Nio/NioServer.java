@@ -7,6 +7,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 import java.util.List;
 
 public class NioServer {
@@ -18,23 +19,35 @@ public class NioServer {
         createTcpListeners(serverConfig);
 
         while (true) {
-            if (selector.select() == 0)
-                continue;
 
-            for (var key : selector.selectedKeys()) {
+            selector.select();
+
+            Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
+
+            while (iterator.hasNext()) {
+
+                SelectionKey key = iterator.next();
+                iterator.remove();
+
+                if (!key.isValid())
+                    continue;
+
                 if (key.isAcceptable()) {
-                    if (key.channel() instanceof ServerSocketChannel channel) {
-                        Server virtualHost = (Server) key.attachment();
-                        handleAccept(channel, virtualHost);
-                    }
+                    ServerSocketChannel channel = (ServerSocketChannel) key.channel();
+                    Server virtualHost = (Server) key.attachment();
+                    handleAccept(channel, virtualHost);
+                    continue;
                 }
+
                 if (key.isReadable()) {
-                    if (key.channel() instanceof SocketChannel) {
-                        handleRead(key);
-                    }
+                    handleRead(key);
+                    continue;
+                }
+
+                if (key.isWritable()) {
+                    handleWrite(key);
                 }
             }
-            selector.selectedKeys().clear();
         }
     }
 
@@ -43,13 +56,18 @@ public class NioServer {
         SocketChannel client = channel.accept();
         client.configureBlocking(false);
         SelectionKey key = client.register(selector, SelectionKey.OP_READ);
-        ClientHandler handlerClient = new ClientHandler(client, virtualHost);
+        ClientHandler handlerClient = new ClientHandler(client, key, virtualHost);
         key.attach(handlerClient);
     }
 
     private void handleRead(SelectionKey key) throws IOException {
         ClientHandler client = (ClientHandler) key.attachment();
         client.readHttpMessage();
+    }
+
+    private void handleWrite(SelectionKey key) throws IOException {
+        ClientHandler client = (ClientHandler) key.attachment();
+        client.handleResponse();
     }
 
     private void createTcpListeners(List<Server> serverConfig) throws IOException {

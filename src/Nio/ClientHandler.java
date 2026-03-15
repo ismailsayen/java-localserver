@@ -6,20 +6,23 @@ import http.HttpRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 
 public class ClientHandler {
     private SocketChannel client;
     private Server virtualHosts;
+    private SelectionKey key;
     private HttpRequest httpRequest;
     private HttpHeader headerHttp;
     private Boolean isHeadersFound = false;
     private Boolean isBodyFound = false;
 
-    public ClientHandler(SocketChannel client, Server virtualHosts) {
+    public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
         this.virtualHosts = virtualHosts;
+        this.key = key;
     }
 
     public void readHttpMessage() throws IOException {
@@ -61,7 +64,15 @@ public class ClientHandler {
         } catch (Exception e) {
             System.out.println(e);
         }
-        client.close();
+        // client.close();
+    }
+
+    public void  handleResponse()  throws IOException{
+        try {
+            this.httpRequest.executeResponse(this);
+        } catch (Exception e) {
+            // TODO: handle exception
+        }
     }
 
     public void readHeaders(ByteArrayOutputStream byteArrayOutputStream) {
@@ -125,6 +136,14 @@ public class ClientHandler {
 
     public void setHttpRequest(HttpRequest httpRequest) {
         this.httpRequest = httpRequest;
+    }
+
+    public SelectionKey getKey() {
+        return key;
+    }
+
+    public void setKey(SelectionKey key) {
+        this.key = key;
     }
 
 }

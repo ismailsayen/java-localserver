@@ -1,5 +1,7 @@
 package handlers;
 
+import java.io.IOException;
+
 import Nio.ClientHandler;
 import http.HttpHandler;
 
@@ -17,5 +19,11 @@ public class ChunkedHundler implements HttpHandler {
         System.out.println(this.client);
         throw new UnsupportedOperationException("Unimplemented method 'handle'");
     }
+
+     @Override
+    public void response() throws IOException {
+        // TODO Auto-generated method stub
+    }
+
 
 }
