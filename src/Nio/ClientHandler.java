@@ -127,4 +127,12 @@ public class ClientHandler {
         this.httpRequest = httpRequest;
     }
 
+    public HttpHeader getHttpHeader() {
+        return headerHttp;
+    }
+
+    public void setHttpHeader(HttpHeader headerHttp) {
+        this.headerHttp = headerHttp;
+    }
+
 }
