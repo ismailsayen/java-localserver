@@ -2,6 +2,11 @@ package handlers;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 
 import Nio.ClientHandler;
 import http.HttpHandler;
@@ -16,30 +21,102 @@ public class MultipartHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        // TODO Auto-generated method stub
-        System.out.println(this.client.getHttpHeader().getHeaders().get("content-type"));
+        this.extractMultipartFields();
+
         this.client.getKey().interestOps(SelectionKey.OP_WRITE);
     }
 
     @Override
     public void response() throws IOException {
-        // TODO Auto-generated method stub
+        System.out.println("File created successfully.");
+    }
+
+    private void saveFile(byte[] file, String fileName) throws IOException {
+        Path path = Paths.get("www/html/primary/assets/" + fileName);
+
+        Files.write(path, file);
+    }
+
+    private void extractMultipartFields() throws IOException {
+        String contentType = this.client.getHttpHeader().getHeaders().get("content-type");
+        if (!contentType.contains("boundary=")) {
+            throw new RuntimeException("multipart/form-data should contain boundary");
+        }
+
+        String[] parts = contentType.split("boundary=");
+        if (parts.length < 2) {
+            throw new RuntimeException("boundary should contain a value");
+        }
+
+        String boundary = parts[1].trim();
+        if (boundary.startsWith("\"") && boundary.endsWith("\"")) {
+            boundary = boundary.substring(1, boundary.length() - 1);
+        }
+
+        byte[] boundaryBytes = ("--" + boundary).getBytes(StandardCharsets.UTF_8);
+        byte[] body = this.client.getHttpRequest().getBody();
+
+        int start = indexOf(body, boundaryBytes, 0);
+        while (start != -1) {
+            int next = indexOf(body, boundaryBytes, start + boundaryBytes.length);
+
+            if (next == -1) {
+                break;
+            }
+
+            byte[] part = Arrays.copyOfRange(body, start + boundaryBytes.length + 2, next);
+
+            this.handlePart(part);
+
+            start = next;
+        }
+    }
+
+    private int indexOf(byte[] data, byte[] pattern, int start) {
+        for (int i = start; i <= data.length - pattern.length; i++) {
+            boolean found = true;
+
+            for (int j = 0; j < pattern.length; j++) {
+                if (data[i + j] != pattern[j]) {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void handlePart(byte[] part) throws IOException {
+        byte[] pattern = "\r\n\r\n".getBytes(StandardCharsets.UTF_8);
+
+        int headersEnd = this.indexOf(part, pattern, 0);
+        byte[] headersBytes = Arrays.copyOfRange(part, 0, headersEnd);
+        String headers = new String(headersBytes, StandardCharsets.UTF_8);
+
+        String fileName = this.extractFileName(headers);
+        if (fileName == null) {
+            return;
+        }
+
+        byte[] fileBytes = Arrays.copyOfRange(part, headersEnd + 4, part.length - 2);
+        this.saveFile(fileBytes, fileName);
+    }
+
+    private String extractFileName(String headers) {
+        int start = headers.indexOf("filename=\"");
+        if (start == -1) {
+            return null;
+        }
+
+        start += 10;
+
+        int end = headers.indexOf("\"", start);
+
+        return headers.substring(start, end);
     }
 
 }
-
-// private void extractMultipartDetails() {
-
-// if () {
-// if (contentType.contains("boundary=")) {
-// this.isMultipart = true;
-// String[] parts = contentType.split("boundary=");
-// if (parts.length > 1) {
-// this.boundary = parts[1].trim();
-// if (this.boundary.startsWith("\"") && this.boundary.endsWith("\"")) {
-// this.boundary = this.boundary.substring(1, this.boundary.length() - 1);
-// }
-// }
-// }
-// }
-// }
