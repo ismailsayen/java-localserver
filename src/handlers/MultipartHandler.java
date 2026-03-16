@@ -21,23 +21,49 @@ public class MultipartHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        this.extractMultipartFields();
-
+        this.handleMultipartFields();
         this.client.getKey().interestOps(SelectionKey.OP_WRITE);
     }
 
     @Override
     public void response() throws IOException {
-        System.out.println("File created successfully.");
+
     }
 
     private void saveFile(byte[] file, String fileName) throws IOException {
-        Path path = Paths.get("www/html/primary/assets/" + fileName);
+        String root = this.client.getHttpRequest().getRoute().getRoot() + "/assets";
 
-        Files.write(path, file);
+        Path directory = Paths.get(root);
+
+        if (!Files.exists(directory)) {
+            Files.createDirectories(directory);
+        }
+
+        String baseName = fileName;
+        String extension = "";
+
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex != -1) {
+            baseName = fileName.substring(0, dotIndex);
+            extension = fileName.substring(dotIndex);
+        }
+
+        Path filePath = directory.resolve(fileName);
+
+        int counter = 1;
+
+        while (Files.exists(filePath)) {
+            String newName = baseName + "_" + counter + extension;
+            filePath = directory.resolve(newName);
+            counter++;
+        }
+
+        Files.write(filePath, file);
+
+        System.out.println("File created succesfully: " + filePath.getFileName().toString());
     }
 
-    private void extractMultipartFields() throws IOException {
+    private void handleMultipartFields() throws IOException {
         String contentType = this.client.getHttpHeader().getHeaders().get("content-type");
         if (!contentType.contains("boundary=")) {
             throw new RuntimeException("multipart/form-data should contain boundary");
