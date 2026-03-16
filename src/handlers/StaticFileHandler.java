@@ -3,6 +3,7 @@ package handlers;
 import DTO.Route;
 import Nio.ClientHandler;
 import http.HttpHandler;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -17,157 +18,182 @@ public class StaticFileHandler implements HttpHandler {
     private FileChannel fileChannel;
     private long position = 0;
     private long fileSize = 0;
-    private boolean headersSent = false;
+
+    private boolean prepared = false;
+
+    private ByteBuffer headerBuffer;
+    private ByteBuffer bodyBuffer;
 
     public StaticFileHandler(ClientHandler client) {
         this.client = client;
     }
 
     @Override
-    public void handle() throws Exception {
-
-        
+    public void handle() {
         client.getKey().interestOps(SelectionKey.OP_WRITE);
     }
 
     @Override
     public void response() throws IOException {
 
-            // send headers first
-            if (!headersSent) {
-                System.out.println("ssss");
+        if (!prepared) {
 
-                String filePath = this.client.getHttpRequest().resolveFilePath();
-                Path file = Path.of(filePath);
+            String filePath = client.getHttpRequest().resolveFilePath();
+            Path file = Path.of(filePath);
 
-                if (!Files.exists(file)) {
-                    throw new IOException("No Path: " + filePath);
-                }
-
-                if (Files.isDirectory(file)) {
-
-                    Route rt = this.client.getHttpRequest().getRoute();
-
-                    if (rt.getIndex() != null) {
-
-                        Path indexFile = file.resolve(rt.getIndex());
-
-                        if (Files.exists(indexFile)) {
-                            startStreaming(indexFile);
-                            return;
-                        }
-                    }
-
-                    if (rt.getDirectoryListing()) {
-                        String html = generateDirectoryListing(file.toFile(), rt);
-                        sendResponse(200, "text/html", html.getBytes().length, html.getBytes());
-                        return;
-                    }
-
-                    throw new IOException("Directory listing forbidden");
-                }
-
-                startStreaming(file);
+            if (!Files.exists(file)) {
+                //error 404
                 return;
             }
 
-        // streaming phase
-        long chunk = Math.min(1024 * 1024, fileSize - position);
+            if (Files.isDirectory(file)) {
 
-        long transferred = fileChannel.transferTo(position, chunk, client.getClient());
+                Route rt = client.getHttpRequest().getRoute();
 
-        if (transferred > 0) {
-            position += transferred;
-        } else {
+                if (rt.getIndex() != null) {
+
+                    Path index = file.resolve(rt.getIndex());
+
+                    if (Files.exists(index)) {
+                        startFileStreaming(index);
+                        prepared = true;
+                        return;
+                    }
+                }
+
+                if (rt.getDirectoryListing()) {
+                    sendDirectoryListing(file, rt);
+                    prepared = true;
+                    return;
+                }
+                //error 403
+                return;
+            }
+
+            startFileStreaming(file);
+            prepared = true;
             return;
         }
 
-        if (position >= fileSize) {
+        // send headers
+        if (headerBuffer != null && headerBuffer.hasRemaining()) {
 
-            fileChannel.close();
+            client.getClient().write(headerBuffer);
 
-            SelectionKey key = client.getKey();
-            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+            if (headerBuffer.hasRemaining())
+                return;
 
-            client.getClient().close();
+            headerBuffer = null;
+        }
+
+        // send directory listing body
+        if (bodyBuffer != null && bodyBuffer.hasRemaining()) {
+
+            client.getClient().write(bodyBuffer);
+
+            if (bodyBuffer.hasRemaining())
+                return;
+
+            finish();
+            return;
+        }
+
+        // stream file
+        if (fileChannel != null) {
+
+            long chunk = Math.min(64 * 1024, fileSize - position);
+
+            long transferred = fileChannel.transferTo(position, chunk, client.getClient());
+
+            if (transferred > 0)
+                position += transferred;
+
+            if (position >= fileSize)
+                finish();
         }
     }
 
-    private void startStreaming(Path file) throws IOException {
+    private void startFileStreaming(Path file) throws IOException {
 
         String contentType = Files.probeContentType(file);
+
         if (contentType == null)
             contentType = "application/octet-stream";
 
         fileSize = Files.size(file);
         fileChannel = FileChannel.open(file);
 
-        headersSent = true;
-        sendHeaders(200, contentType, fileSize);
+        String headers = """
+                HTTP/1.1 200 OK\r
+                Content-Type: """ + contentType + "\r\n" +
+                "Content-Length: " + fileSize + "\r\n" +
+                "Connection: close\r\n\r\n";
 
+        headerBuffer = ByteBuffer.wrap(headers.getBytes());
     }
 
-    private String generateDirectoryListing(java.io.File directory, Route rt) {
+    private void sendDirectoryListing(Path dir, Route rt) {
+
+        String html = generateDirectoryListing(dir.toFile(), rt);
+
+        byte[] body = html.getBytes();
+
+        String headers = """
+                HTTP/1.1 200 OK\r
+                Content-Type: text/html\r
+                Content-Length: """ + body.length + "\r\n" +
+                "Connection: close\r\n\r\n";
+
+        headerBuffer = ByteBuffer.wrap(headers.getBytes());
+        bodyBuffer = ByteBuffer.wrap(body);
+    }
+
+    private void finish() throws IOException {
+
+        if (fileChannel != null)
+            fileChannel.close();
+
+        SelectionKey key = client.getKey();
+
+        key.cancel();
+
+        client.getClient().close();
+    }
+
+    private String generateDirectoryListing(File directory, Route rt) {
+
         StringBuilder html = new StringBuilder();
-        String reqPath = rt.getPath().replaceAll("/", "\\\\") + directory.getPath().substring(rt.getRoot().length());
+
+        String reqPath = rt.getPath().replaceAll("/", "\\\\") +
+                directory.getPath().substring(rt.getRoot().length());
+
         html.append("<html><body>");
         html.append("<h1>Index of ").append(reqPath).append("</h1>");
+
         java.io.File[] files = directory.listFiles();
+
         if (files != null) {
+
             for (java.io.File file : files) {
+
                 String name = file.getName();
                 String link = reqPath + "/" + name;
+
                 if (file.isDirectory()) {
                     name += "/";
                     link += "/";
                 }
-                html.append("<a href=\"").append(link).append("\">").append(name).append("</a><br>");
+
+                html.append("<a href=\"")
+                        .append(link)
+                        .append("\">")
+                        .append(name)
+                        .append("</a><br>");
             }
         }
+
         html.append("</body></html>");
+
         return html.toString();
-    }
-
-    public void sendHeaders(int status, String contentType, long contentLength) throws IOException {
-
-        String statusLine = "HTTP/1.1 " + status + " OK\r\n";
-
-        String headers = "Content-Type: " + contentType + "\r\n" +
-                "Content-Length: " + contentLength + "\r\n" +
-                "Connection: close\r\n\r\n";
-
-        ByteBuffer buffer = ByteBuffer.wrap((statusLine + headers).getBytes());
-
-        while (buffer.hasRemaining()) {
-            int written = client.getClient().write(buffer);
-
-            if (written == 0) {
-                return;
-            }
-        }
-
-    }
-
-    public void sendResponse(int status, String contentType, long contentLength, byte[] body)
-            throws IOException {
-
-        String statusLine = "HTTP/1.1 " + status + " OK\r\n";
-
-        String headers = "Content-Type: " + contentType + "\r\n" +
-                "Content-Length: " + contentLength + "\r\n" +
-                "Connection: close\r\n\r\n";
-
-        byte[] headerBytes = (statusLine + headers).getBytes();
-
-        ByteBuffer buffer = ByteBuffer.allocate(headerBytes.length + body.length);
-
-        buffer.put(headerBytes);
-        buffer.put(body);
-        buffer.flip();
-
-        while (buffer.hasRemaining()) {
-            client.getClient().write(buffer);
-        }
-
     }
 }

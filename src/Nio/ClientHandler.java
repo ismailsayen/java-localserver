@@ -73,7 +73,7 @@ public class ClientHandler {
         } catch (IOException e) {
             // TODO: handle exception
         }
-        this.client.close();
+        // this.client.close();
     }
 
     public void readHeaders(ByteArrayOutputStream byteArrayOutputStream) {
