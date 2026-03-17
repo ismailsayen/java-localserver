@@ -22,6 +22,7 @@ public class MultipartHandler implements HttpHandler {
     @Override
     public void handle() throws Exception {
         this.handleMultipartFields();
+        this.client.setIsResponseDone(true);
         this.client.getKey().interestOps(SelectionKey.OP_WRITE);
     }
 

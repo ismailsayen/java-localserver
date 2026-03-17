@@ -18,6 +18,7 @@ public class ClientHandler {
     private HttpHeader headerHttp;
     private Boolean isHeadersFound = false;
     private Boolean isBodyFound = false;
+    private Boolean isResponseDone = false;
 
     public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
@@ -73,7 +74,9 @@ public class ClientHandler {
         } catch (IOException e) {
             // TODO: handle exception
         }
-        this.client.close();
+        if (this.isResponseDone) {
+            this.client.close();
+        }
     }
 
     public void readHeaders(ByteArrayOutputStream byteArrayOutputStream) {
@@ -153,6 +156,14 @@ public class ClientHandler {
 
     public void setKey(SelectionKey key) {
         this.key = key;
+    }
+
+    public Boolean getIsResponseDone() {
+        return this.isResponseDone;
+    }
+
+    public void setIsResponseDone(Boolean value) {
+        this.isResponseDone = value;
     }
 
 }
