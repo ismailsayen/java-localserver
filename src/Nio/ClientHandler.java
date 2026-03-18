@@ -25,19 +25,16 @@ public class ClientHandler {
     private Long contentLength;
     private Long totalBodyBytes;
     private ByteBuffer buf;
+    private String bodyTempFileName;
 
     public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
         this.virtualHosts = virtualHosts;
         this.key = key;
         this.totalBodyBytes = 0L;
-        buf = ByteBuffer.allocate(8096);
+        buf = ByteBuffer.allocate(30);
         this.byteArrayOutputStream = new ByteArrayOutputStream();
-        try {
-            this.fileOutputStream = new FileOutputStream("body.tmp");
-        } catch (IOException e) {
-            System.out.println(e);
-        }
+        this.createdFileOutputStream();
     }
 
     public void readHttpMessage() throws IOException {
@@ -128,6 +125,14 @@ public class ClientHandler {
     // }
     // }
     // }
+
+    private void createdFileOutputStream() {
+        try {
+            this.fileOutputStream = new FileOutputStream("body.tmp");
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
 
     @Override
     public String toString() {
