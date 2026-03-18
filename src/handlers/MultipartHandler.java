@@ -1,19 +1,17 @@
 package handlers;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.channels.SelectionKey;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-
+import java.nio.file.*;
 import Nio.ClientHandler;
 import http.HttpHandler;
 
 public class MultipartHandler implements HttpHandler {
 
     private final ClientHandler client;
+    private static final int BUFFER_SIZE = 16384;
+    private static final String HEADERS_END = "\r\n\r\n";
 
     public MultipartHandler(ClientHandler client) {
         this.client = client;
@@ -21,19 +19,97 @@ public class MultipartHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        this.handleMultipartFields();
+        processMultipartBody();
         this.client.setIsResponseDone(true);
-        this.client.getKey().interestOps(SelectionKey.OP_WRITE);
+        client.getKey().interestOps(SelectionKey.OP_WRITE);
     }
 
     @Override
     public void response() throws IOException {
-
+        
     }
 
-    private void saveFile(byte[] file, String fileName) throws IOException {
-        String root = this.client.getHttpRequest().getRoute().getRoot() + "/assets";
+    private void processMultipartBody() throws IOException {
+        String contentType = this.client.getHttpHeader().getHeaders().get("content-type");
+        String boundary = extractBoundary(contentType);
+        byte[] boundaryBytes = ("\r\n--" + boundary).getBytes(StandardCharsets.UTF_8);
 
+        Path bodyPath = Paths.get("body.tmp");
+
+        try (BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(bodyPath))) {
+            byte[] buffer = new byte[BUFFER_SIZE];
+            ByteArrayOutputStream window = new ByteArrayOutputStream();
+            FileOutputStream currentFile = null;
+            boolean readingHeaders = true;
+            int bytesRead;
+
+            while ((bytesRead = bis.read(buffer)) != -1) {
+                window.write(buffer, 0, bytesRead);
+                byte[] data = window.toByteArray();
+                window.reset();
+
+                int pos = 0;
+                while (pos < data.length) {
+                    if (readingHeaders) {
+                        int headersEndIndex = indexOf(data, HEADERS_END.getBytes(), pos);
+                        if (headersEndIndex != -1) {
+                            String headers = new String(data, pos, headersEndIndex - pos, StandardCharsets.UTF_8);
+                            String fileName = extractFileName(headers);
+
+                            if (fileName != null) {
+                                currentFile = createUniqueFile(fileName);
+                            }
+
+                            pos = headersEndIndex + HEADERS_END.length();
+                            readingHeaders = false;
+                        } else {
+                            window.write(data, pos, data.length - pos);
+                            break;
+                        }
+                    } else {
+                        int nextBoundaryIndex = indexOf(data, boundaryBytes, pos);
+
+                        if (nextBoundaryIndex != -1) {
+                            if (currentFile != null) {
+                                currentFile.write(data, pos, nextBoundaryIndex - pos);
+                                currentFile.close();
+                                currentFile = null;
+                            }
+                            pos = nextBoundaryIndex + boundaryBytes.length;
+                            readingHeaders = true;
+                        } else {
+                            int safeWriteLen = (data.length - pos) - boundaryBytes.length;
+                            if (safeWriteLen > 0) {
+                                if (currentFile != null) {
+                                    currentFile.write(data, pos, safeWriteLen);
+                                }
+                                pos += safeWriteLen;
+                            }
+                            window.write(data, pos, data.length - pos);
+                            break;
+                        }
+                    }
+                }
+            }
+            if (currentFile != null)
+                currentFile.close();
+        } finally {
+            Files.deleteIfExists(bodyPath);
+        }
+    }
+
+    private String extractBoundary(String contentType) {
+        if (!contentType.contains("boundary=")) {
+            throw new RuntimeException("Missing boundary in Content-Type");
+        }
+        String boundary = contentType.split("boundary=")[1].trim();
+        return (boundary.startsWith("\"") && boundary.endsWith("\""))
+                ? boundary.substring(1, boundary.length() - 1)
+                : boundary;
+    }
+
+    private FileOutputStream createUniqueFile(String fileName) throws IOException {
+        String root = this.client.getHttpRequest().getRoute().getRoot() + "/assets";
         Path directory = Paths.get(root);
 
         if (!Files.exists(directory)) {
@@ -42,7 +118,6 @@ public class MultipartHandler implements HttpHandler {
 
         String baseName = fileName;
         String extension = "";
-
         int dotIndex = fileName.lastIndexOf('.');
         if (dotIndex != -1) {
             baseName = fileName.substring(0, dotIndex);
@@ -50,100 +125,37 @@ public class MultipartHandler implements HttpHandler {
         }
 
         Path filePath = directory.resolve(fileName);
-
         int counter = 1;
-
         while (Files.exists(filePath)) {
-            String newName = baseName + "_" + counter + extension;
-            filePath = directory.resolve(newName);
+            filePath = directory.resolve(baseName + "_" + counter + extension);
             counter++;
         }
 
-        Files.write(filePath, file);
-
-        System.out.println("File created succesfully: " + filePath.getFileName().toString());
-    }
-
-    private void handleMultipartFields() throws IOException {
-        String contentType = this.client.getHttpHeader().getHeaders().get("content-type");
-        if (!contentType.contains("boundary=")) {
-            throw new RuntimeException("multipart/form-data should contain boundary");
-        }
-
-        String[] parts = contentType.split("boundary=");
-        if (parts.length < 2) {
-            throw new RuntimeException("boundary should contain a value");
-        }
-
-        String boundary = parts[1].trim();
-        if (boundary.startsWith("\"") && boundary.endsWith("\"")) {
-            boundary = boundary.substring(1, boundary.length() - 1);
-        }
-
-        byte[] boundaryBytes = ("--" + boundary).getBytes(StandardCharsets.UTF_8);
-        byte[] body = this.client.getHttpRequest().getBody();
-
-        int start = indexOf(body, boundaryBytes, 0);
-        while (start != -1) {
-            int next = indexOf(body, boundaryBytes, start + boundaryBytes.length);
-
-            if (next == -1) {
-                break;
-            }
-
-            byte[] part = Arrays.copyOfRange(body, start + boundaryBytes.length + 2, next);
-
-            this.handlePart(part);
-
-            start = next;
-        }
+        System.out.println("Saving file to: " + filePath);
+        return new FileOutputStream(filePath.toFile());
     }
 
     private int indexOf(byte[] data, byte[] pattern, int start) {
         for (int i = start; i <= data.length - pattern.length; i++) {
             boolean found = true;
-
             for (int j = 0; j < pattern.length; j++) {
                 if (data[i + j] != pattern[j]) {
                     found = false;
                     break;
                 }
             }
-
-            if (found) {
+            if (found)
                 return i;
-            }
         }
         return -1;
     }
 
-    private void handlePart(byte[] part) throws IOException {
-        byte[] pattern = "\r\n\r\n".getBytes(StandardCharsets.UTF_8);
-
-        int headersEnd = this.indexOf(part, pattern, 0);
-        byte[] headersBytes = Arrays.copyOfRange(part, 0, headersEnd);
-        String headers = new String(headersBytes, StandardCharsets.UTF_8);
-
-        String fileName = this.extractFileName(headers);
-        if (fileName == null) {
-            return;
-        }
-
-        byte[] fileBytes = Arrays.copyOfRange(part, headersEnd + 4, part.length - 2);
-        this.saveFile(fileBytes, fileName);
-    }
-
     private String extractFileName(String headers) {
         int start = headers.indexOf("filename=\"");
-        if (start == -1) {
+        if (start == -1)
             return null;
-        }
-
         start += 10;
-
         int end = headers.indexOf("\"", start);
-
         return headers.substring(start, end);
     }
-
 }
