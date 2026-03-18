@@ -12,7 +12,7 @@ public class Route {
     private String index; // default file for directories
     private Boolean directoryListing; // enable/disable directory listing
     private String redirectTo; // redirection target
-    private Integer redirectStatusCode; // redirection status code
+    private Long redirectStatusCode; // redirection status code
     private String cgiExtension; // CGI by file extension
 
     public String getPath() {
@@ -72,11 +72,11 @@ public class Route {
         this.redirectTo = redirectTo;
     }
 
-    public Integer getRedirectStatusCode() {
+    public Long getRedirectStatusCode() {
         return redirectStatusCode;
     }
 
-    public void setRedirectStatusCode(Integer redirectStatusCode) {
+    public void setRedirectStatusCode(Long redirectStatusCode) {
         this.redirectStatusCode = redirectStatusCode;
     }
 

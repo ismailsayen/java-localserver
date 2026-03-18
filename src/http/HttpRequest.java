@@ -29,7 +29,7 @@ public class HttpRequest {
             return;
 
         if (route.getRedirectTo() != null) {
-            this.setHnadler(new RedirectHandler(client));
+            this.setHnadler(new RedirectHandler(client,route.getRedirectTo(),route.getRedirectStatusCode()));
             return;
         }
 
