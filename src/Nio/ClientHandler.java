@@ -68,7 +68,7 @@ public class ClientHandler {
         }
 
         try {
-            if (totalBodyBytes >= this.contentLength) {
+            if (this.contentLength == null || totalBodyBytes >= this.contentLength) {
                 this.httpRequest.executeHandler(this);
             }
         } catch (Exception e) {
@@ -106,7 +106,12 @@ public class ClientHandler {
                 return;
             }
 
-            this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
+            String cl = this.headerHttp.getHeaders().get("content-length");
+
+            if (cl != null) {
+                this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
+            }
+
         }
     }
 
