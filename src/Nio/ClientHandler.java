@@ -4,6 +4,7 @@ import DTO.Server;
 import http.HttpHeader;
 import http.HttpRequest;
 import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -19,17 +20,27 @@ public class ClientHandler {
     private Boolean isHeadersFound = false;
     private Boolean isBodyFound = false;
     private Boolean isResponseDone = false;
+    private ByteArrayOutputStream byteArrayOutputStream;
+    private FileOutputStream fileOutputStream;
+    private Long contentLength;
+    private Long totalBodyBytes;
+    private ByteBuffer buf;
 
     public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
         this.virtualHosts = virtualHosts;
         this.key = key;
+        this.totalBodyBytes = 0L;
+        buf = ByteBuffer.allocate(8096);
+        this.byteArrayOutputStream = new ByteArrayOutputStream();
+        try {
+            this.fileOutputStream = new FileOutputStream("body.tmp");
+        } catch (IOException e) {
+            System.out.println(e);
+        }
     }
 
     public void readHttpMessage() throws IOException {
-        ByteBuffer buf = ByteBuffer.allocate(60);
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-
         int bytesRead = this.client.read(buf);
         if (bytesRead <= 0) {
             this.client.close();
@@ -39,11 +50,12 @@ public class ClientHandler {
         while (bytesRead > 0) {
             buf.flip();
 
-            byteArrayOutputStream.write(buf.array(), 0, bytesRead);
             if (!this.isHeadersFound) {
+                byteArrayOutputStream.write(buf.array(), 0, bytesRead);
                 this.readHeaders(byteArrayOutputStream);
             } else {
-                this.readBody(byteArrayOutputStream);
+                totalBodyBytes += bytesRead;
+                this.fileOutputStream.write(buf.array(), 0, bytesRead);
             }
 
             buf.clear();
@@ -55,13 +67,10 @@ public class ClientHandler {
             bytesRead = this.client.read(buf);
         }
 
-        if (!this.isBodyFound) {
-            this.readBody(byteArrayOutputStream);
-        }
-
         try {
-            this.httpRequest.setBody(byteArrayOutputStream.toByteArray());
-            this.httpRequest.executeHandler(this);
+            if (totalBodyBytes >= this.contentLength) {
+                this.httpRequest.executeHandler(this);
+            }
         } catch (Exception e) {
             System.out.println(e);
         }
@@ -90,28 +99,30 @@ public class ClientHandler {
             this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
             try {
                 this.httpRequest.HandleRequest(this);
+                byteArrayOutputStream.reset();
+                this.fileOutputStream.write(data, index + 4, data.length - (index + 4));
+                this.totalBodyBytes += data.length - (index + 4);
             } catch (Exception e) {
                 return;
             }
 
-            byteArrayOutputStream.reset();
-            byteArrayOutputStream.write(data, index + 4, data.length - (index + 4));
+            this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
         }
     }
 
-    public void readBody(ByteArrayOutputStream byteArrayOutputStream) {
-        String contentLength = this.headerHttp.getHeaders().get("content-length");
+    // public void readBody(ByteArrayOutputStream byteArrayOutputStream) {
+    // String contentLength = this.headerHttp.getHeaders().get("content-length");
 
-        if (contentLength != null) {
-            int cl = Integer.parseInt(contentLength);
-            if (byteArrayOutputStream.size() >= cl) {
-                byte[] data = byteArrayOutputStream.toByteArray();
-                this.isBodyFound = true;
-                byteArrayOutputStream.reset();
-                byteArrayOutputStream.write(data, 0, cl);
-            }
-        }
-    }
+    // if (contentLength != null) {
+    // int cl = Integer.parseInt(contentLength);
+    // if (byteArrayOutputStream.size() >= cl) {
+    // byte[] data = byteArrayOutputStream.toByteArray();
+    // this.isBodyFound = true;
+    // byteArrayOutputStream.reset();
+    // byteArrayOutputStream.write(data, 0, cl);
+    // }
+    // }
+    // }
 
     @Override
     public String toString() {
@@ -166,4 +177,19 @@ public class ClientHandler {
         this.isResponseDone = value;
     }
 
+    public ByteArrayOutputStream getByteArrayOutputStream() {
+        return this.byteArrayOutputStream;
+    }
+
+    public void setByteArrayOutputStream(ByteArrayOutputStream byteArrayOutputStream) {
+        this.byteArrayOutputStream = byteArrayOutputStream;
+    }
+
+    public FileOutputStream getFileOutputStream() {
+        return this.fileOutputStream;
+    }
+
+    public void setFileOutputStream(FileOutputStream fileOutputStream) {
+        this.fileOutputStream = fileOutputStream;
+    }
 }
