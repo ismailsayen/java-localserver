@@ -26,7 +26,7 @@ public class MultipartHandler implements HttpHandler {
 
     @Override
     public void response() throws IOException {
-        
+
     }
 
     private void processMultipartBody() throws IOException {
@@ -34,7 +34,11 @@ public class MultipartHandler implements HttpHandler {
         String boundary = extractBoundary(contentType);
         byte[] boundaryBytes = ("\r\n--" + boundary).getBytes(StandardCharsets.UTF_8);
 
-        Path bodyPath = Paths.get("body.tmp");
+        Path bodyPath = Paths.get("temp_uploads", this.client.getBodyFileTempName());
+        if (!Files.exists(bodyPath)) {
+            this.client.getClient().close();
+            throw new RuntimeException("Body file not found");
+        }
 
         try (BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(bodyPath))) {
             byte[] buffer = new byte[BUFFER_SIZE];
@@ -93,8 +97,8 @@ public class MultipartHandler implements HttpHandler {
             }
             if (currentFile != null)
                 currentFile.close();
-        } finally {
-            Files.deleteIfExists(bodyPath);
+        } catch (Exception e) {
+            System.out.println(e);
         }
     }
 
