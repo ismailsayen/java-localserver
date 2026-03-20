@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.util.Map;
 
 import Nio.ClientHandler;
@@ -23,6 +25,9 @@ public class CgiHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
+        this.client.setIsResponseDone(true);
+        this.client.getKey().interestOps(SelectionKey.OP_WRITE);
+
         HttpRequest request = client.getHttpRequest();
 
         String method = client.getHttpHeader().getMethod();
@@ -49,9 +54,8 @@ public class CgiHandler implements HttpHandler {
         Process process = pb.start();
         if (method.equalsIgnoreCase("POST")) {
             try (
-                FileInputStream fis = new FileInputStream("body.tmp");
-                OutputStream os = process.getOutputStream();
-            ) {
+                    FileInputStream fis = new FileInputStream("body.tmp");
+                    OutputStream os = process.getOutputStream();) {
                 byte[] buffer = new byte[1024];
                 int read;
 
@@ -67,7 +71,7 @@ public class CgiHandler implements HttpHandler {
         StringBuilder output = new StringBuilder();
         String line;
 
-        while((line = reader.readLine()) != null) {
+        while ((line = reader.readLine()) != null) {
             output.append(line).append("\r\n");
         }
 
@@ -76,9 +80,24 @@ public class CgiHandler implements HttpHandler {
 
     @Override
     public void response() throws IOException {
+        this.client.setIsResponseDone(true);
+        this.client.getKey().interestOps(SelectionKey.OP_WRITE);
+
         if (this.responseBytes == null) {
             return;
         }
+
+        String httpResponse = "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: text/html\r\n" +
+                "Content-Length: " + responseBytes.length + "\r\n" +
+                "\r\n";
+
+        ByteBuffer buffer = ByteBuffer.allocate(httpResponse.length() + responseBytes.length);
+        buffer.put(httpResponse.getBytes());
+        buffer.put(responseBytes);
+        buffer.flip();
+
+        this.client.getClient().write(buffer);
     }
 
 }
