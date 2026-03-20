@@ -119,7 +119,7 @@ public class Validators {
         // ===== redirectStatusCode =====
         if (rt.get("redirectStatusCode") != null) {
 
-            route.setRedirectStatusCode((Integer) rt.get("redirectStatusCode"));
+            route.setRedirectStatusCode((Long) rt.get("redirectStatusCode"));
         }
 
         // ===== cgi =====

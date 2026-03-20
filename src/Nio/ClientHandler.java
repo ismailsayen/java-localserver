@@ -10,6 +10,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
 
 public class ClientHandler {
     private SocketChannel client;
@@ -18,63 +22,59 @@ public class ClientHandler {
     private HttpRequest httpRequest;
     private HttpHeader headerHttp;
     private Boolean isHeadersFound = false;
-    private Boolean isBodyFound = false;
     private Boolean isResponseDone = false;
     private ByteArrayOutputStream byteArrayOutputStream;
     private FileOutputStream fileOutputStream;
     private Long contentLength;
     private Long totalBodyBytes;
     private ByteBuffer buf;
+    private String bodyTempFileName;
+    private Boolean isStartReading;
 
     public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
         this.virtualHosts = virtualHosts;
         this.key = key;
         this.totalBodyBytes = 0L;
-        buf = ByteBuffer.allocate(8096);
+        this.isStartReading = false;
+        buf = ByteBuffer.allocate(5);
         this.byteArrayOutputStream = new ByteArrayOutputStream();
-        try {
-            this.fileOutputStream = new FileOutputStream("body.tmp");
-        } catch (IOException e) {
-            System.out.println(e);
-        }
     }
 
     public void readHttpMessage() throws IOException {
         int bytesRead = this.client.read(buf);
-        if (bytesRead <= 0) {
+
+        if (bytesRead == -1) {
             this.client.close();
             return;
         }
 
-        while (bytesRead > 0) {
-            buf.flip();
+        if (bytesRead == 0)
+            return;
 
-            if (!this.isHeadersFound) {
-                byteArrayOutputStream.write(buf.array(), 0, bytesRead);
-                this.readHeaders(byteArrayOutputStream);
-            } else {
-                totalBodyBytes += bytesRead;
-                this.fileOutputStream.write(buf.array(), 0, bytesRead);
-            }
-
-            buf.clear();
-
-            if (this.isBodyFound) {
-                break;
-            }
-
-            bytesRead = this.client.read(buf);
+        if (!this.isStartReading) {
+            this.createdFileOutputStream();
+            this.isStartReading = true;
         }
 
-        try {
-            if (this.contentLength == null || totalBodyBytes >= this.contentLength) {
+        buf.flip();
+        if (!this.isHeadersFound) {
+            byteArrayOutputStream.write(buf.array(), 0, bytesRead);
+            this.readHeaders(byteArrayOutputStream);
+        } else {
+            totalBodyBytes += bytesRead;
+            this.fileOutputStream.write(buf.array(), 0, bytesRead);
+        }
+        buf.clear();
+
+        if (this.httpRequest != null && (this.contentLength == null || totalBodyBytes >= this.contentLength)) {
+            this.fileOutputStream.close();
+            try {
                 this.httpRequest.executeHandler(this);
+            } catch (Exception e) {
+                System.out.println(e);
             }
-        } catch (Exception e) {
-            System.out.println(e);
         }
-        // client.close();
     }
 
     public void handleResponse() throws IOException {
@@ -84,6 +84,8 @@ public class ClientHandler {
             // TODO: handle exception
         }
         if (this.isResponseDone) {
+            Path bodyPath = Paths.get("temp_uploads", this.bodyTempFileName);
+            Files.deleteIfExists(bodyPath);
             this.client.close();
         }
     }
@@ -115,19 +117,17 @@ public class ClientHandler {
         }
     }
 
-    // public void readBody(ByteArrayOutputStream byteArrayOutputStream) {
-    // String contentLength = this.headerHttp.getHeaders().get("content-length");
-
-    // if (contentLength != null) {
-    // int cl = Integer.parseInt(contentLength);
-    // if (byteArrayOutputStream.size() >= cl) {
-    // byte[] data = byteArrayOutputStream.toByteArray();
-    // this.isBodyFound = true;
-    // byteArrayOutputStream.reset();
-    // byteArrayOutputStream.write(data, 0, cl);
-    // }
-    // }
-    // }
+    private void createdFileOutputStream() {
+        try {
+            String uniqueId = UUID.randomUUID().toString();
+            this.bodyTempFileName = "body" + uniqueId + ".tmp";
+            Path tempPath = Paths.get("temp_uploads", this.bodyTempFileName);
+            Files.createDirectories(tempPath.getParent());
+            this.fileOutputStream = new FileOutputStream(tempPath.toFile());
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
 
     @Override
     public String toString() {
@@ -196,5 +196,13 @@ public class ClientHandler {
 
     public void setFileOutputStream(FileOutputStream fileOutputStream) {
         this.fileOutputStream = fileOutputStream;
+    }
+
+    public String getBodyFileTempName() {
+        return this.bodyTempFileName;
+    }
+
+    public void setBodyFileTempName(String value) {
+        this.bodyTempFileName = value;
     }
 }

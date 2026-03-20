@@ -2,4 +2,4 @@ build
 .idea
 *.iml
 www/html/primary/assets
-body.tmp
+temp_uploads

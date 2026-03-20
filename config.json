@@ -2,7 +2,7 @@
   {
     "name": "primary.local",
     "host": "127.0.0.1",
-    "port": [8081, 8023, 8082, 8084, 8087],
+    "port": [8081, 8023, 8082, 8084, 8088, 8092],
     "defaultServer": true,
     "limitSize": 1024,
     "routes": [
@@ -18,11 +18,16 @@
         "methods": ["GET", "POST"],
         "cgiExtension": ".py"
       },
-      
+      {
+        "path": "/redirect",
+        "methods": ["GET"],
+        "redirectTo": "/www",
+        "redirectStatusCode": 302
+      },
       {
         "path": "/www",
         "root": "./www/html",
-        "methods": ["GET","DELETE"],
+        "methods": ["GET", "DELETE"],
         "directoryListing": true
       }
     ]
