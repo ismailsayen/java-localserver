@@ -2,6 +2,7 @@ package handlers;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 import Nio.ClientHandler;
 import http.HttpHandler;
@@ -28,6 +29,13 @@ public class CgiHandler implements HttpHandler {
             responseBytes = "<h1>404 Not Found</h1>".getBytes();
             return;
         }
+
+        ProcessBuilder pb = new ProcessBuilder("python3", scriptPath);
+
+        Map<String, String> env = pb.environment();
+        env.put("REQUEST_METHOD", method);
+        env.put("SCRIPT_NAME", scriptPath);
+        env.put("SERVER_PROTOCOL", "HTTP/1.1");
     }
 
     @Override
