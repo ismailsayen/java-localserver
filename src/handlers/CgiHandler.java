@@ -1,7 +1,9 @@
 package handlers;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Map;
 
 import Nio.ClientHandler;
@@ -36,6 +38,28 @@ public class CgiHandler implements HttpHandler {
         env.put("REQUEST_METHOD", method);
         env.put("SCRIPT_NAME", scriptPath);
         env.put("SERVER_PROTOCOL", "HTTP/1.1");
+
+        String contentLength = client.getHttpHeader().getHeaders().get("content-length");
+        if (contentLength != null) {
+            env.put("CONTENT_LENGTH", contentLength);
+        }
+
+        Process process = pb.start();
+        if (method.equalsIgnoreCase("POST")) {
+            try (
+                FileInputStream fis = new FileInputStream("body.tmp");
+                OutputStream os = process.getOutputStream();
+            ) {
+                byte[] buffer = new byte[1024];
+                int read;
+
+                while ((read = fis.read(buffer)) != -1) {
+                    os.write(buffer, 0, read);
+                }
+
+                os.flush();
+            }
+        }
     }
 
     @Override
