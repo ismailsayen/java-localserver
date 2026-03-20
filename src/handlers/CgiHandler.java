@@ -8,6 +8,7 @@ import http.HttpHandler;
 public class CgiHandler implements HttpHandler {
 
     private final ClientHandler client;
+    private byte[] responseBytes;
 
     public CgiHandler(ClientHandler client) {
         this.client = client;
@@ -15,15 +16,12 @@ public class CgiHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        // TODO Auto-generated method stub
-        System.out.println(this.client);
-        throw new UnsupportedOperationException("Unimplemented method 'handle'");
+        
     }
 
     @Override
     public void response() throws IOException {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'response'");
+        
     }
 
 }
