@@ -76,7 +76,9 @@ public class CgiHandler implements HttpHandler {
 
     @Override
     public void response() throws IOException {
-        
+        if (this.responseBytes == null) {
+            return;
+        }
     }
 
 }
