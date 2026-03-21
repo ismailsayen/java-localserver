@@ -13,6 +13,11 @@
         "index": "index.html"
       },
       {
+        "path": "/uploads",
+        "root": "./www/uploads",
+        "methods": ["GET", "POST", "DELETE"]
+      },
+      {
         "path": "/cgi-bin",
         "root": "./www/scripts",
         "methods": ["GET", "POST"],

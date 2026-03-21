@@ -12,14 +12,14 @@ import java.util.UUID;
 import Nio.ClientHandler;
 import http.HttpHandler;
 
-public class MultipartHandler implements HttpHandler {
+public class UploadsHandler implements HttpHandler {
 
     private final ClientHandler client;
     private List<String> filesName = new ArrayList<>();
     private static final int BUFFER_SIZE = 16384;
     private static final String HEADERS_END = "\r\n\r\n";
 
-    public MultipartHandler(ClientHandler client) {
+    public UploadsHandler(ClientHandler client) {
         this.client = client;
     }
 
@@ -140,7 +140,7 @@ public class MultipartHandler implements HttpHandler {
     }
 
     private FileOutputStream createUniqueFile(String fileName) throws IOException {
-        String root = this.client.getHttpRequest().getRoute().getRoot() + "/assets";
+        String root = this.client.getHttpRequest().getRoute().getRoot();
         Path directory = Paths.get(root);
 
         if (!Files.exists(directory)) {

@@ -99,21 +99,18 @@ public class ClientHandler {
             this.isHeadersFound = true;
             this.headerHttp = HttpHeader.parseHeaders(message.substring(0, index));
             this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
+            String cl = this.headerHttp.getHeaders().get("content-length");
+            if (cl != null) {
+                this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
+            }
             try {
                 this.httpRequest.HandleRequest(this);
                 byteArrayOutputStream.reset();
                 this.fileOutputStream.write(data, index + 4, data.length - (index + 4));
                 this.totalBodyBytes += data.length - (index + 4);
             } catch (Exception e) {
-                return;
+                throw new RuntimeException(e);
             }
-
-            String cl = this.headerHttp.getHeaders().get("content-length");
-
-            if (cl != null) {
-                this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
-            }
-
         }
     }
 
