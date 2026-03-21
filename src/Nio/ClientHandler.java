@@ -37,7 +37,7 @@ public class ClientHandler {
         this.key = key;
         this.totalBodyBytes = 0L;
         this.isStartReading = false;
-        buf = ByteBuffer.allocate(5);
+        buf = ByteBuffer.allocate(8096);
         this.byteArrayOutputStream = new ByteArrayOutputStream();
     }
 
