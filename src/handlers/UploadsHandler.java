@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 import Nio.ClientHandler;
+import config.utils.Session;
 import http.HttpHandler;
 
 public class UploadsHandler implements HttpHandler {
@@ -35,10 +36,12 @@ public class UploadsHandler implements HttpHandler {
     public void response() throws IOException {
         String body = String.join(", ", filesName);
         byte[] bodyBytes = body.getBytes(StandardCharsets.UTF_8);
+        Session session = client.getHttpRequest().getSession();
 
         StringBuilder sb = new StringBuilder();
         sb.append("HTTP/1.1 200 OK\r\n");
         sb.append("Content-Type: text/plain; charset=UTF-8\r\n");
+        sb.append("Set-Cookie: SESSION_ID=" + session.getId() + "; Path=/\r\n");
         sb.append("Content-Length: ").append(bodyBytes.length).append("\r\n");
         sb.append("Connection: close\r\n");
         sb.append("\r\n");

@@ -2,6 +2,7 @@ package handlers;
 
 import DTO.Route;
 import Nio.ClientHandler;
+import config.utils.Session;
 import http.HttpHandler;
 import java.io.File;
 import java.io.IOException;
@@ -42,7 +43,7 @@ public class StaticFileHandler implements HttpHandler {
             Path file = Path.of(filePath);
 
             if (!Files.exists(file)) {
-                //error 404
+                // error 404
                 return;
             }
 
@@ -66,7 +67,7 @@ public class StaticFileHandler implements HttpHandler {
                     prepared = true;
                     return;
                 }
-                //error 403
+                // error 403
                 return;
             }
 
@@ -123,9 +124,12 @@ public class StaticFileHandler implements HttpHandler {
         fileSize = Files.size(file);
         fileChannel = FileChannel.open(file);
 
+        Session session = client.getHttpRequest().getSession(); 
+
         String headers = """
                 HTTP/1.1 200 OK\r
                 Content-Type: """ + contentType + "\r\n" +
+                "Set-Cookie: SESSION_ID=" + session.getId() + "; Path=/\r\n" +
                 "Content-Length: " + fileSize + "\r\n" +
                 "Connection: close\r\n\r\n";
 
