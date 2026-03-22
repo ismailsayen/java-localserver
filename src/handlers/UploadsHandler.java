@@ -1,24 +1,31 @@
 package handlers;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 import Nio.ClientHandler;
 import http.HttpHandler;
 
-public class MultipartHandler implements HttpHandler {
+public class UploadsHandler implements HttpHandler {
 
     private final ClientHandler client;
+    private List<String> filesName = new ArrayList<>();
     private static final int BUFFER_SIZE = 16384;
     private static final String HEADERS_END = "\r\n\r\n";
 
-    public MultipartHandler(ClientHandler client) {
+    public UploadsHandler(ClientHandler client) {
         this.client = client;
     }
 
     @Override
     public void handle() throws Exception {
+        this.filesName.clear();
         processMultipartBody();
         this.client.setIsResponseDone(true);
         client.getKey().interestOps(SelectionKey.OP_WRITE);
@@ -26,7 +33,27 @@ public class MultipartHandler implements HttpHandler {
 
     @Override
     public void response() throws IOException {
+        String body = String.join(", ", filesName);
+        byte[] bodyBytes = body.getBytes(StandardCharsets.UTF_8);
 
+        StringBuilder sb = new StringBuilder();
+        sb.append("HTTP/1.1 200 OK\r\n");
+        sb.append("Content-Type: text/plain; charset=UTF-8\r\n");
+        sb.append("Content-Length: ").append(bodyBytes.length).append("\r\n");
+        sb.append("Connection: close\r\n");
+        sb.append("\r\n");
+
+        byte[] headerBytes = sb.toString().getBytes(StandardCharsets.UTF_8);
+        ByteBuffer buffer = ByteBuffer.allocate(headerBytes.length + bodyBytes.length);
+
+        buffer.put(headerBytes);
+        buffer.put(bodyBytes);
+
+        buffer.flip();
+
+        while (buffer.hasRemaining()) {
+            this.client.getClient().write(buffer);
+        }
     }
 
     private void processMultipartBody() throws IOException {
@@ -113,7 +140,7 @@ public class MultipartHandler implements HttpHandler {
     }
 
     private FileOutputStream createUniqueFile(String fileName) throws IOException {
-        String root = this.client.getHttpRequest().getRoute().getRoot() + "/assets";
+        String root = this.client.getHttpRequest().getRoute().getRoot();
         Path directory = Paths.get(root);
 
         if (!Files.exists(directory)) {
@@ -129,13 +156,14 @@ public class MultipartHandler implements HttpHandler {
         }
 
         Path filePath = directory.resolve(fileName);
-        int counter = 1;
-        while (Files.exists(filePath)) {
-            filePath = directory.resolve(baseName + "_" + counter + extension);
-            counter++;
+        String newFileName = baseName + extension;
+        if (Files.exists(filePath)) {
+            String uniqueId = UUID.randomUUID().toString();
+            filePath = directory.resolve(baseName + "_" + uniqueId + extension);
+            newFileName = baseName + "_" + uniqueId + extension;
         }
 
-        System.out.println("Saving file to: " + filePath);
+        this.filesName.add(newFileName);
         return new FileOutputStream(filePath.toFile());
     }
 

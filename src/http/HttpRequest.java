@@ -5,9 +5,10 @@ import DTO.Server;
 import Nio.ClientHandler;
 import handlers.CgiHandler;
 import handlers.DeleteHandler;
-import handlers.MultipartHandler;
 import handlers.RedirectHandler;
 import handlers.StaticFileHandler;
+import handlers.UploadsHandler;
+
 import java.io.IOException;
 
 public class HttpRequest {
@@ -29,7 +30,7 @@ public class HttpRequest {
             return;
 
         if (route.getRedirectTo() != null) {
-            this.setHnadler(new RedirectHandler(client,route.getRedirectTo(),route.getRedirectStatusCode()));
+            this.setHnadler(new RedirectHandler(client, route.getRedirectTo(), route.getRedirectStatusCode()));
             return;
         }
 
@@ -81,8 +82,9 @@ public class HttpRequest {
         }
 
         // 2. Détection Multipart
-        if (contentType != null && contentType.contains("multipart/form-data")) {
-            this.setHnadler(new MultipartHandler(client));
+        if (contentType != null && contentType.contains("multipart/form-data")
+         && method.equalsIgnoreCase("POST")) {
+            this.setHnadler(new UploadsHandler(client));
             return;
         }
 

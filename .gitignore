@@ -1,5 +1,5 @@
 build
 .idea
 *.iml
-www/html/primary/assets
+www/uploads
 temp_uploads
