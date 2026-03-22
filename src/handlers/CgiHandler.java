@@ -11,9 +11,7 @@ import java.nio.channels.SelectionKey;
 import java.util.Map;
 
 import Nio.ClientHandler;
-import config.utils.CookieParser;
 import config.utils.Session;
-import config.utils.SessionManager;
 import http.HttpHandler;
 import http.HttpRequest;
 
@@ -21,7 +19,6 @@ public class CgiHandler implements HttpHandler {
 
     private final ClientHandler client;
     private byte[] responseBytes;
-    private String sessionId;
 
     public CgiHandler(ClientHandler client) {
         this.client = client;
@@ -29,21 +26,6 @@ public class CgiHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        String cookieHeader = client.getHttpHeader().getHeaders().get("cookie");
-        Map<String, String> cookies = CookieParser.parse(cookieHeader);
-        Session session = null;
-        
-        if (cookies.containsKey("SESSION_ID")) {
-            session = SessionManager.getSession(cookies.get("SESSION_ID"));
-        } 
-
-        if (session == null) {
-            session = SessionManager.createSession();
-        }
-
-        this.sessionId = session.getId();
-        session.touch();
-
         this.client.setIsResponseDone(true);
         this.client.getKey().interestOps(SelectionKey.OP_WRITE);
 
@@ -106,9 +88,11 @@ public class CgiHandler implements HttpHandler {
             return;
         }
 
+        Session session = client.getHttpRequest().getSession();
+
         String httpResponse = "HTTP/1.1 200 OK\r\n" +
                 "Content-Type: text/html\r\n" +
-                "Set-Cookie: SESSION_ID=" + this.sessionId + "; Path=/\r\n" +
+                "Set-Cookie: SESSION_ID=" + session.getId() + "; Path=/\r\n" +
                 "Content-Length: " + responseBytes.length + "\r\n" +
                 "\r\n";
 

@@ -26,6 +26,6 @@ public class Session {
     }
 
     public void touch() {
-        this.lastAccessTime = lastAccessTime;
+        this.lastAccessTime = System.currentTimeMillis();
     }
 }
