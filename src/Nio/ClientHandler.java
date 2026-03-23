@@ -35,7 +35,7 @@ public class ClientHandler {
     private Boolean isBodyExists;
     private ByteArrayOutputStream chunkBuffer = new ByteArrayOutputStream();
     private int remainingChunkSize = -1;
-    private boolean isFinished = false;
+    private boolean isRequestDone = false;
 
     public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
@@ -74,9 +74,13 @@ public class ClientHandler {
         }
         buf.clear();
 
-        if (this.httpRequest != null && (this.contentLength == null || totalBodyBytes >= this.contentLength)) {
-            this.fileOutputStream.close();
+        if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
+            this.isRequestDone = true;
+        }
+
+        if (this.httpRequest != null && this.isRequestDone) {
             try {
+                this.fileOutputStream.close();
                 this.httpRequest.executeHandler(this);
             } catch (Exception e) {
                 System.out.println(e);
@@ -114,6 +118,8 @@ public class ClientHandler {
             } else if (cl != null) {
                 this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
                 this.isBodyExists = true;
+            } else {
+                this.isRequestDone = true;
             }
 
             try {
@@ -133,7 +139,6 @@ public class ClientHandler {
     }
 
     private void readBody(byte[] data) throws IOException {
-        System.out.println(new String(data));
         if (this.isChunked) {
             chunkBuffer.write(data);
             byte[] currentBuffer = chunkBuffer.toByteArray();
@@ -149,7 +154,7 @@ public class ClientHandler {
                             offset = crlfIdx + 2;
 
                             if (remainingChunkSize == 0) {
-                                this.isFinished = true;
+                                this.isRequestDone = true;
                                 break;
                             }
                         } else {
