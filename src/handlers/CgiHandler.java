@@ -26,9 +26,6 @@ public class CgiHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        this.client.setIsResponseDone(true);
-        this.client.getKey().interestOps(SelectionKey.OP_WRITE);
-
         HttpRequest request = client.getHttpRequest();
 
         String method = client.getHttpHeader().getMethod();
@@ -53,30 +50,45 @@ public class CgiHandler implements HttpHandler {
         }
 
         Process process = pb.start();
-        if (method.equalsIgnoreCase("POST")) {
+
+        // write body if exists
+        if (this.client.getBodyFileTempName() != null) {
             try (
-                    FileInputStream fis = new FileInputStream("body.tmp");
-                    OutputStream os = process.getOutputStream();) {
+                    FileInputStream fis = new FileInputStream("temp_uploads/" + this.client.getBodyFileTempName());
+                    OutputStream os = process.getOutputStream()) {
                 byte[] buffer = new byte[1024];
                 int read;
-
                 while ((read = fis.read(buffer)) != -1) {
                     os.write(buffer, 0, read);
                 }
-
                 os.flush();
             }
         }
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        // 🔥 WAIT for process
+        process.waitFor();
+
+        // 🔥 READ ERRORS
+        BufferedReader errorReader = new BufferedReader(
+                new InputStreamReader(process.getErrorStream()));
+        String err;
+        while ((err = errorReader.readLine()) != null) {
+            System.out.println("CGI ERROR: " + err);
+        }
+
+        // 🔥 READ OUTPUT
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream()));
+
         StringBuilder output = new StringBuilder();
         String line;
-
         while ((line = reader.readLine()) != null) {
             output.append(line).append("\r\n");
         }
 
         this.responseBytes = output.toString().getBytes();
+        this.client.setIsResponseDone(true);
+        this.client.getKey().interestOps(SelectionKey.OP_WRITE);
     }
 
     @Override

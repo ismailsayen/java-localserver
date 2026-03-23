@@ -94,8 +94,8 @@ public class HttpRequest {
         String path = httpHeader.getPath();
         String method = httpHeader.getMethod().toUpperCase();
         String contentType = this.httpHeader.getHeaders().get("content-type");
-
-        if (path.contains("/cgi-bin/") || path.endsWith(".py") || path.endsWith(".php")) {
+        
+        if (path.contains("/cgi-bin") || path.endsWith(".py")) {
             this.setHnadler(new CgiHandler(client));
             return;
         }
