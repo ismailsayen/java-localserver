@@ -33,6 +33,9 @@ public class ClientHandler {
     private Boolean isStartReading;
     private Boolean isChunked;
     private Boolean isBodyExists;
+    private ByteArrayOutputStream chunkBuffer = new ByteArrayOutputStream();
+    private int remainingChunkSize = -1;
+    private boolean isFinished = false;
 
     public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
@@ -132,7 +135,56 @@ public class ClientHandler {
     private void readBody(byte[] data) throws IOException {
         System.out.println(new String(data));
         if (this.isChunked) {
+            chunkBuffer.write(data);
+            byte[] currentBuffer = chunkBuffer.toByteArray();
+            int offset = 0;
 
+            while (offset < currentBuffer.length) {
+                if (remainingChunkSize == -1) {
+                    int crlfIdx = indexOf(currentBuffer, "\r\n".getBytes(), offset);
+                    if (crlfIdx != -1) {
+                        String sizeStr = new String(Arrays.copyOfRange(currentBuffer, offset, crlfIdx)).trim();
+                        if (!sizeStr.isEmpty()) {
+                            remainingChunkSize = Integer.parseInt(sizeStr, 16);
+                            offset = crlfIdx + 2;
+
+                            if (remainingChunkSize == 0) {
+                                this.isFinished = true;
+                                break;
+                            }
+                        } else {
+                            offset = crlfIdx + 2;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                if (remainingChunkSize > 0) {
+                    int availableData = currentBuffer.length - offset;
+                    int bytesToRead = Math.min(remainingChunkSize, availableData);
+
+                    if (bytesToRead > 0) {
+                        this.fileOutputStream.write(currentBuffer, offset, bytesToRead);
+                        this.totalBodyBytes += bytesToRead;
+                        remainingChunkSize -= bytesToRead;
+                        offset += bytesToRead;
+                    }
+
+                    if (remainingChunkSize == 0) {
+                        if (offset + 2 <= currentBuffer.length) {
+                            offset += 2;
+                            remainingChunkSize = -1;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            chunkBuffer.reset();
+            if (offset < currentBuffer.length) {
+                chunkBuffer.write(currentBuffer, offset, currentBuffer.length - offset);
+            }
         } else {
             this.fileOutputStream.write(data, 0, data.length);
             this.totalBodyBytes += data.length;
@@ -149,6 +201,21 @@ public class ClientHandler {
         } catch (IOException e) {
             System.out.println(e);
         }
+    }
+
+    private int indexOf(byte[] data, byte[] pattern, int start) {
+        for (int i = start; i <= data.length - pattern.length; i++) {
+            boolean found = true;
+            for (int j = 0; j < pattern.length; j++) {
+                if (data[i + j] != pattern[j]) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found)
+                return i;
+        }
+        return -1;
     }
 
     @Override
