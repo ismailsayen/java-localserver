@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class ClientHandler {
@@ -30,6 +31,8 @@ public class ClientHandler {
     private ByteBuffer buf;
     private String bodyTempFileName;
     private Boolean isStartReading;
+    private Boolean isChunked;
+    private Boolean isBodyExists;
 
     public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
@@ -37,6 +40,8 @@ public class ClientHandler {
         this.key = key;
         this.totalBodyBytes = 0L;
         this.isStartReading = false;
+        this.isChunked = false;
+        this.isBodyExists = false;
         buf = ByteBuffer.allocate(8096);
         this.byteArrayOutputStream = new ByteArrayOutputStream();
     }
@@ -61,9 +66,8 @@ public class ClientHandler {
         if (!this.isHeadersFound) {
             byteArrayOutputStream.write(buf.array(), 0, bytesRead);
             this.readHeaders(byteArrayOutputStream);
-        } else {
-            totalBodyBytes += bytesRead;
-            this.fileOutputStream.write(buf.array(), 0, bytesRead);
+        } else if (this.isBodyExists) {
+            this.readBody(Arrays.copyOf(this.buf.array(), bytesRead));
         }
         buf.clear();
 
@@ -100,17 +104,38 @@ public class ClientHandler {
             this.headerHttp = HttpHeader.parseHeaders(message.substring(0, index));
             this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
             String cl = this.headerHttp.getHeaders().get("content-length");
-            if (cl != null) {
+            String te = this.headerHttp.getHeaders().get("transfer-encoding");
+            if (te != null && te.equals("chunked")) {
+                this.isChunked = true;
+                this.isBodyExists = true;
+            } else if (cl != null) {
                 this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
+                this.isBodyExists = true;
             }
+
             try {
                 this.httpRequest.HandleRequest(this);
                 byteArrayOutputStream.reset();
-                this.fileOutputStream.write(data, index + 4, data.length - (index + 4));
-                this.totalBodyBytes += data.length - (index + 4);
+                if (this.isBodyExists) {
+                    int bodyStart = index + 4;
+                    if (bodyStart < data.length) {
+                        byte[] bodyPart = Arrays.copyOfRange(data, bodyStart, data.length);
+                        this.readBody(bodyPart);
+                    }
+                }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    private void readBody(byte[] data) throws IOException {
+        System.out.println(new String(data));
+        if (this.isChunked) {
+
+        } else {
+            this.fileOutputStream.write(data, 0, data.length);
+            this.totalBodyBytes += data.length;
         }
     }
 
