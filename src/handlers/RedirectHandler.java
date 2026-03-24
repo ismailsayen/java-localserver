@@ -1,6 +1,7 @@
 package handlers;
 
 import Nio.ClientHandler;
+import config.utils.Session;
 import http.HttpHandler;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -14,8 +15,8 @@ public class RedirectHandler implements HttpHandler {
 
     public RedirectHandler(ClientHandler client, String redirectTo, Long redirectStatusCode) {
         this.client = client;
-        this.redirectTo=redirectTo;
-        this.redirectStatusCode=redirectStatusCode;
+        this.redirectTo = redirectTo;
+        this.redirectStatusCode = redirectStatusCode;
     }
 
     @Override
@@ -26,20 +27,29 @@ public class RedirectHandler implements HttpHandler {
     @Override
     public void response() throws IOException {
 
-        
-
         String statusText;
         switch (redirectStatusCode.intValue()) {
-            case 301: statusText = "Moved Permanently"; break;
-            case 302: statusText = "Found"; break;
-            case 307: statusText = "Temporary Redirect"; break;
-            case 308: statusText = "Permanent Redirect"; break;
-            default: statusText = "Found";
+            case 301:
+                statusText = "Moved Permanently";
+                break;
+            case 302:
+                statusText = "Found";
+                break;
+            case 307:
+                statusText = "Temporary Redirect";
+                break;
+            case 308:
+                statusText = "Permanent Redirect";
+                break;
+            default:
+                statusText = "Found";
         }
 
-        String response =
-                "HTTP/1.1 " + redirectStatusCode + " " + statusText + "\r\n" +
+        Session session = client.getHttpRequest().getSession();
+
+        String response = "HTTP/1.1 " + redirectStatusCode + " " + statusText + "\r\n" +
                 "Location: " + this.redirectTo + "\r\n" +
+                "Set-Cookie: SESSION_ID=" + session.getId() + "; Path=/\r\n" +
                 "Content-Length: 0\r\n" +
                 "Connection: close\r\n" +
                 "\r\n";

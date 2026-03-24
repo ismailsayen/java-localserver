@@ -8,7 +8,10 @@ import handlers.DeleteHandler;
 import handlers.RedirectHandler;
 import handlers.StaticFileHandler;
 import handlers.UploadsHandler;
-
+import config.utils.CookieParser;
+import config.utils.Session;
+import config.utils.SessionManager;
+import java.util.Map;
 import java.io.IOException;
 
 public class HttpRequest {
@@ -18,6 +21,7 @@ public class HttpRequest {
     private HttpHandler hnadler;
     private Server server;
     private Route route;
+    private Session session;
 
     public HttpRequest(HttpHeader httpHeader, Server server) {
         this.httpHeader = httpHeader;
@@ -25,6 +29,21 @@ public class HttpRequest {
     }
 
     public void HandleRequest(ClientHandler client) {
+        String cookieHeader = client.getHttpHeader().getHeaders().get("cookie");
+        Map<String, String> cookies = CookieParser.parse(cookieHeader);
+        Session session = null;
+
+        if (cookies.containsKey("SESSION_ID")) {
+            session = SessionManager.getSession(cookies.get("SESSION_ID"));
+        }
+
+        if (session == null) {
+            session = SessionManager.createSession();
+        }
+
+        session.touch();
+        this.session = session;
+        
         this.route = this.extractRoute();
         if (status != RequestStatus.READY)
             return;
@@ -75,15 +94,15 @@ public class HttpRequest {
         String path = httpHeader.getPath();
         String method = httpHeader.getMethod().toUpperCase();
         String contentType = this.httpHeader.getHeaders().get("content-type");
-
-        if (path.contains("/cgi-bin/") || path.endsWith(".py") || path.endsWith(".php")) {
+        
+        if (path.contains("/cgi-bin") || path.endsWith(".py")) {
             this.setHnadler(new CgiHandler(client));
             return;
         }
 
         // 2. Détection Multipart
         if (contentType != null && contentType.contains("multipart/form-data")
-         && method.equalsIgnoreCase("POST")) {
+                && method.equalsIgnoreCase("POST")) {
             this.setHnadler(new UploadsHandler(client));
             return;
         }
@@ -139,6 +158,10 @@ public class HttpRequest {
 
     public HttpHandler getHnadler() {
         return hnadler;
+    }
+
+    public Session getSession() {
+        return this.session;
     }
 
     public void setHnadler(HttpHandler hnadler) {
