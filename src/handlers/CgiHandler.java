@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.util.Map;
 
@@ -19,6 +20,9 @@ public class CgiHandler implements HttpHandler {
 
     private final ClientHandler client;
     private byte[] responseBytes;
+    private FileChannel fileChannel;
+    private int position;
+    private long fileSize = 0;
 
     public CgiHandler(ClientHandler client) {
         this.client = client;
@@ -58,16 +62,16 @@ public class CgiHandler implements HttpHandler {
             try (
                     FileInputStream fis = new FileInputStream("temp_uploads/" + this.client.getBodyFileTempName());
                     OutputStream os = process.getOutputStream()) {
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[8096];
                 int read;
+
                 while ((read = fis.read(buffer)) != -1) {
                     os.write(buffer, 0, read);
                 }
+
                 os.flush();
             }
         }
-
-        process.waitFor();
 
         BufferedReader errorReader = new BufferedReader(
                 new InputStreamReader(process.getErrorStream()));
