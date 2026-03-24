@@ -49,6 +49,7 @@ public class ClientHandler {
         this.isBodyExists = false;
         buf = ByteBuffer.allocate(8096);
         this.byteArrayOutputStream = new ByteArrayOutputStream();
+        this.error = new ErrorHandler(this);
     }
 
     public void readHttpMessage() throws IOException {
@@ -62,8 +63,8 @@ public class ClientHandler {
         if (bytesRead == 0)
             return;
 
-        if(this.totalBodyBytes>this.virtualHosts.getLimitRequestBody()){
-            //Error_body_large
+        if (this.totalBodyBytes > this.virtualHosts.getLimitRequestBody()) {
+            // Error_body_large
             return;
         }
 
@@ -87,17 +88,18 @@ public class ClientHandler {
                 }
                 this.httpRequest.executeHandler(this);
             } catch (Exception e) {
-                System.out.println(e);
+                this.error.error(httpRequest.getStatus(), e.getMessage());
+                this.client.close();
             }
         }
     }
 
     public void handleResponse() throws IOException {
-        this.error=new ErrorHandler(this);
         try {
             this.httpRequest.executeResponse(this);
         } catch (Exception e) {
-            System.out.println(e);
+            this.error.error(httpRequest.getStatus(), e.getMessage());
+            this.client.close();
         }
         if (this.isResponseDone) {
             if (this.bodyTempFileName != null) {

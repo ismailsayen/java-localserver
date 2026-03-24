@@ -17,7 +17,7 @@ import java.io.IOException;
 public class HttpRequest {
 
     private final HttpHeader httpHeader;
-    private ErrorStatus status;
+    private String status;
     private HttpHandler hnadler;
     private Server server;
     private Route route;
@@ -76,12 +76,12 @@ public class HttpRequest {
         }
 
         if (bestMatch == null) {
-            status = ErrorStatus.NOT_FOUND;
+            status = "404";
             throw new RuntimeException("Route not found");
         }
 
         if (!bestMatch.getMethods().contains(method)) {
-            status = ErrorStatus.METHOD_NOT_ALLOWED;
+            status = "405";
             throw new RuntimeException("Method not allowed");
         }
 
@@ -147,11 +147,11 @@ public class HttpRequest {
         return root + relativePath;
     }
 
-    public ErrorStatus getStatus() {
-        return status;
+    public String getStatus() {
+        return status!=null?status:"500";
     }
 
-    public void setStatus(ErrorStatus status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 

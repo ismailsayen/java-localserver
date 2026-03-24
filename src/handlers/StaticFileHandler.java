@@ -3,7 +3,6 @@ package handlers;
 import DTO.Route;
 import Nio.ClientHandler;
 import config.utils.Session;
-import http.ErrorStatus;
 import http.HttpHandler;
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +42,7 @@ public class StaticFileHandler implements HttpHandler {
             String filePath = client.getHttpRequest().resolveFilePath();
             Path file = Path.of(filePath);
             if (!Files.exists(file)) {
-                this.client.getHttpRequest().setStatus(ErrorStatus.NOT_FOUND);
+                this.client.getHttpRequest().setStatus("404");
                 throw new RuntimeException("Page Not Found");
             }
 
@@ -68,8 +67,8 @@ public class StaticFileHandler implements HttpHandler {
                     return;
                 }
                 // error 403
-                client.setIsResponseDone(true);
-                return;
+                this.client.getHttpRequest().setStatus("403");
+                throw new RuntimeException("Access Forbid");               
             }
 
             startFileStreaming(file);
@@ -162,13 +161,12 @@ public class StaticFileHandler implements HttpHandler {
 
         key.cancel();
 
-        client.getClient().close();
+        this.client.setIsResponseDone(true);
     }
 
     private String generateDirectoryListing(File directory, Route rt) {
 
         StringBuilder html = new StringBuilder();
-        System.out.println(directory.getName() + rt.getRoot());
         String reqPath = directory.getPath().length() > rt.getRoot().length() ? rt.getPath().replaceAll("/", "\\\\") +
                 directory.getPath().substring(rt.getRoot().length()) : directory.getPath();
 

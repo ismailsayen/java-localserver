@@ -13,7 +13,8 @@
     "defaultServer": true,
     "limitSize": 1024,
     "errorPages": {
-      "404": "./custom_error_pages/404.html"
+      "404": "./custom_error_pages/404.html",
+      "403": "./custom_error_pages/403.html"
     },
     "routes": [
       {
@@ -57,7 +58,7 @@
           "GET",
           "DELETE"
         ],
-        "directoryListing": true
+        "directoryListing": false
       }
     ]
   }
