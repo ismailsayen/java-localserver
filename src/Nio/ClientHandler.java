@@ -1,10 +1,10 @@
 package Nio;
 
 import DTO.Server;
+import handlers.ErrorHandler;
 import http.HttpHeader;
 import http.HttpRequest;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,6 +37,7 @@ public class ClientHandler {
     private ByteArrayOutputStream chunkBuffer = new ByteArrayOutputStream();
     private int remainingChunkSize = -1;
     private boolean isRequestDone = false;
+    private ErrorHandler error;
 
     public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
@@ -60,6 +61,11 @@ public class ClientHandler {
 
         if (bytesRead == 0)
             return;
+
+        if(this.totalBodyBytes>this.virtualHosts.getLimitRequestBody()){
+            //Error_body_large
+            return;
+        }
 
         buf.flip();
         if (!this.isHeadersFound) {
@@ -87,10 +93,11 @@ public class ClientHandler {
     }
 
     public void handleResponse() throws IOException {
+        this.error=new ErrorHandler(this);
         try {
             this.httpRequest.executeResponse(this);
-        } catch (IOException e) {
-            // TODO: handle exception
+        } catch (Exception e) {
+            System.out.println(e);
         }
         if (this.isResponseDone) {
             if (this.bodyTempFileName != null) {
@@ -303,5 +310,13 @@ public class ClientHandler {
 
     public void setBodyFileTempName(String value) {
         this.bodyTempFileName = value;
+    }
+
+    public ErrorHandler getErrorHandler() {
+        return this.error;
+    }
+
+    public void setErrorPages(ErrorHandler error) {
+        this.error = error;
     }
 }

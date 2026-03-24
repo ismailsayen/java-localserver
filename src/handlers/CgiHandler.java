@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.util.Map;
 
@@ -20,9 +19,7 @@ public class CgiHandler implements HttpHandler {
 
     private final ClientHandler client;
     private byte[] responseBytes;
-    private FileChannel fileChannel;
-    private int position;
-    private long fileSize = 0;
+   
 
     public CgiHandler(ClientHandler client) {
         this.client = client;

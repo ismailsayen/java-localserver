@@ -17,7 +17,7 @@ import java.io.IOException;
 public class HttpRequest {
 
     private final HttpHeader httpHeader;
-    private RequestStatus status = RequestStatus.READY;
+    private ErrorStatus status;
     private HttpHandler hnadler;
     private Server server;
     private Route route;
@@ -45,8 +45,7 @@ public class HttpRequest {
         this.session = session;
         
         this.route = this.extractRoute();
-        if (status != RequestStatus.READY)
-            return;
+       
 
         if (route.getRedirectTo() != null) {
             this.setHnadler(new RedirectHandler(client, route.getRedirectTo(), route.getRedirectStatusCode()));
@@ -77,12 +76,12 @@ public class HttpRequest {
         }
 
         if (bestMatch == null) {
-            status = RequestStatus.NOT_FOUND;
+            status = ErrorStatus.NOT_FOUND;
             throw new RuntimeException("Route not found");
         }
 
         if (!bestMatch.getMethods().contains(method)) {
-            status = RequestStatus.METHOD_NOT_ALLOWED;
+            status = ErrorStatus.METHOD_NOT_ALLOWED;
             throw new RuntimeException("Method not allowed");
         }
 
@@ -148,11 +147,11 @@ public class HttpRequest {
         return root + relativePath;
     }
 
-    public RequestStatus getStatus() {
+    public ErrorStatus getStatus() {
         return status;
     }
 
-    public void setStatus(RequestStatus status) {
+    public void setStatus(ErrorStatus status) {
         this.status = status;
     }
 

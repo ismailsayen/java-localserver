@@ -3,6 +3,7 @@ package handlers;
 import DTO.Route;
 import Nio.ClientHandler;
 import config.utils.Session;
+import http.ErrorStatus;
 import http.HttpHandler;
 import java.io.File;
 import java.io.IOException;
@@ -42,8 +43,8 @@ public class StaticFileHandler implements HttpHandler {
             String filePath = client.getHttpRequest().resolveFilePath();
             Path file = Path.of(filePath);
             if (!Files.exists(file)) {
-                // error 404
-                return;
+                this.client.getHttpRequest().setStatus(ErrorStatus.NOT_FOUND);
+                throw new RuntimeException("Page Not Found");
             }
 
             if (Files.isDirectory(file)) {
@@ -66,7 +67,7 @@ public class StaticFileHandler implements HttpHandler {
                     prepared = true;
                     return;
                 }
-                //error 403
+                // error 403
                 client.setIsResponseDone(true);
                 return;
             }
@@ -124,7 +125,7 @@ public class StaticFileHandler implements HttpHandler {
         fileSize = Files.size(file);
         fileChannel = FileChannel.open(file);
 
-        Session session = client.getHttpRequest().getSession(); 
+        Session session = client.getHttpRequest().getSession();
 
         String headers = """
                 HTTP/1.1 200 OK\r
@@ -167,9 +168,9 @@ public class StaticFileHandler implements HttpHandler {
     private String generateDirectoryListing(File directory, Route rt) {
 
         StringBuilder html = new StringBuilder();
-        System.out.println(directory.getName()+rt.getRoot());
-        String reqPath =directory.getPath().length()> rt.getRoot().length()? rt.getPath().replaceAll("/", "\\\\") +
-                directory.getPath().substring(rt.getRoot().length()):directory.getPath();
+        System.out.println(directory.getName() + rt.getRoot());
+        String reqPath = directory.getPath().length() > rt.getRoot().length() ? rt.getPath().replaceAll("/", "\\\\") +
+                directory.getPath().substring(rt.getRoot().length()) : directory.getPath();
 
         html.append("<html><body>");
         html.append("<h1>Index of ").append(reqPath).append("</h1>");

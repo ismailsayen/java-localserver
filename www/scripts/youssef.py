@@ -1,3 +1,3 @@
 print("hello from youssef !")
-for i in range(8000):
+for i in range(10000):
     print(i)
