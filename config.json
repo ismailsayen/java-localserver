@@ -31,7 +31,7 @@
       },
       {
         "path": "/www",
-        "root": "./www/html",
+        "root": "./www/",
         "methods": ["GET", "DELETE"],
         "directoryListing": true
       }

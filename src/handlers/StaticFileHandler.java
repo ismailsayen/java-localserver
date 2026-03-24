@@ -40,7 +40,6 @@ public class StaticFileHandler implements HttpHandler {
 
             String filePath = client.getHttpRequest().resolveFilePath();
             Path file = Path.of(filePath);
-
             if (!Files.exists(file)) {
                 //error 404
                 return;
@@ -67,6 +66,7 @@ public class StaticFileHandler implements HttpHandler {
                     return;
                 }
                 //error 403
+                client.setIsResponseDone(true);
                 return;
             }
 
@@ -163,9 +163,9 @@ public class StaticFileHandler implements HttpHandler {
     private String generateDirectoryListing(File directory, Route rt) {
 
         StringBuilder html = new StringBuilder();
-
-        String reqPath = rt.getPath().replaceAll("/", "\\\\") +
-                directory.getPath().substring(rt.getRoot().length());
+        System.out.println(directory.getName()+rt.getRoot());
+        String reqPath =directory.getPath().length()> rt.getRoot().length()? rt.getPath().replaceAll("/", "\\\\") +
+                directory.getPath().substring(rt.getRoot().length()):directory.getPath();
 
         html.append("<html><body>");
         html.append("<h1>Index of ").append(reqPath).append("</h1>");

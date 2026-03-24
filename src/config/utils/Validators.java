@@ -105,11 +105,8 @@ public class Validators {
         }
 
         // ===== directoryListing =====
-        if (rt.get("directoryListing") != null) {
-
             route.setDirectoryListing((Boolean) rt.getOrDefault("directoryListing",false));
-        }
-
+        
         // ===== redirectTo =====
         if (rt.get("redirectTo") != null) {
 

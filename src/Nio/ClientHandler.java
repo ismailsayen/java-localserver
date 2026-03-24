@@ -4,6 +4,7 @@ import DTO.Server;
 import http.HttpHeader;
 import http.HttpRequest;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -60,11 +61,6 @@ public class ClientHandler {
         if (bytesRead == 0)
             return;
 
-        if (!this.isStartReading) {
-            this.createdFileOutputStream();
-            this.isStartReading = true;
-        }
-
         buf.flip();
         if (!this.isHeadersFound) {
             byteArrayOutputStream.write(buf.array(), 0, bytesRead);
@@ -80,7 +76,9 @@ public class ClientHandler {
 
         if (this.httpRequest != null && this.isRequestDone) {
             try {
-                this.fileOutputStream.close();
+                if (this.fileOutputStream != null) {
+                    this.fileOutputStream.close();
+                }
                 this.httpRequest.executeHandler(this);
             } catch (Exception e) {
                 System.out.println(e);
@@ -95,8 +93,10 @@ public class ClientHandler {
             // TODO: handle exception
         }
         if (this.isResponseDone) {
-            Path bodyPath = Paths.get("temp_uploads", this.bodyTempFileName);
-            Files.deleteIfExists(bodyPath);
+            if (this.bodyTempFileName != null) {
+                Path bodyPath = Paths.get("temp_uploads", this.bodyTempFileName);
+                Files.deleteIfExists(bodyPath);
+            }
             this.client.close();
         }
     }
@@ -139,6 +139,11 @@ public class ClientHandler {
     }
 
     private void readBody(byte[] data) throws IOException {
+        if (!this.isStartReading) {
+            this.createdFileOutputStream();
+            this.isStartReading = true;
+        }
+
         if (this.isChunked) {
             chunkBuffer.write(data);
             byte[] currentBuffer = chunkBuffer.toByteArray();
