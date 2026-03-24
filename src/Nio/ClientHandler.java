@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class ClientHandler {
@@ -30,6 +31,11 @@ public class ClientHandler {
     private ByteBuffer buf;
     private String bodyTempFileName;
     private Boolean isStartReading;
+    private Boolean isChunked;
+    private Boolean isBodyExists;
+    private ByteArrayOutputStream chunkBuffer = new ByteArrayOutputStream();
+    private int remainingChunkSize = -1;
+    private boolean isRequestDone = false;
 
     public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
         this.client = client;
@@ -37,6 +43,8 @@ public class ClientHandler {
         this.key = key;
         this.totalBodyBytes = 0L;
         this.isStartReading = false;
+        this.isChunked = false;
+        this.isBodyExists = false;
         buf = ByteBuffer.allocate(8096);
         this.byteArrayOutputStream = new ByteArrayOutputStream();
     }
@@ -61,15 +69,18 @@ public class ClientHandler {
         if (!this.isHeadersFound) {
             byteArrayOutputStream.write(buf.array(), 0, bytesRead);
             this.readHeaders(byteArrayOutputStream);
-        } else {
-            totalBodyBytes += bytesRead;
-            this.fileOutputStream.write(buf.array(), 0, bytesRead);
+        } else if (this.isBodyExists) {
+            this.readBody(Arrays.copyOf(this.buf.array(), bytesRead));
         }
         buf.clear();
 
-        if (this.httpRequest != null && (this.contentLength == null || totalBodyBytes >= this.contentLength)) {
-            this.fileOutputStream.close();
+        if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
+            this.isRequestDone = true;
+        }
+
+        if (this.httpRequest != null && this.isRequestDone) {
             try {
+                this.fileOutputStream.close();
                 this.httpRequest.executeHandler(this);
             } catch (Exception e) {
                 System.out.println(e);
@@ -100,17 +111,88 @@ public class ClientHandler {
             this.headerHttp = HttpHeader.parseHeaders(message.substring(0, index));
             this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
             String cl = this.headerHttp.getHeaders().get("content-length");
-            if (cl != null) {
+            String te = this.headerHttp.getHeaders().get("transfer-encoding");
+            if (te != null && te.equals("chunked")) {
+                this.isChunked = true;
+                this.isBodyExists = true;
+            } else if (cl != null) {
                 this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
+                this.isBodyExists = true;
+            } else {
+                this.isRequestDone = true;
             }
+
             try {
                 this.httpRequest.HandleRequest(this);
                 byteArrayOutputStream.reset();
-                this.fileOutputStream.write(data, index + 4, data.length - (index + 4));
-                this.totalBodyBytes += data.length - (index + 4);
+                if (this.isBodyExists) {
+                    int bodyStart = index + 4;
+                    if (bodyStart < data.length) {
+                        byte[] bodyPart = Arrays.copyOfRange(data, bodyStart, data.length);
+                        this.readBody(bodyPart);
+                    }
+                }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    private void readBody(byte[] data) throws IOException {
+        if (this.isChunked) {
+            chunkBuffer.write(data);
+            byte[] currentBuffer = chunkBuffer.toByteArray();
+            int offset = 0;
+
+            while (offset < currentBuffer.length) {
+                if (remainingChunkSize == -1) {
+                    int crlfIdx = indexOf(currentBuffer, "\r\n".getBytes(), offset);
+                    if (crlfIdx != -1) {
+                        String sizeStr = new String(Arrays.copyOfRange(currentBuffer, offset, crlfIdx)).trim();
+                        if (!sizeStr.isEmpty()) {
+                            remainingChunkSize = Integer.parseInt(sizeStr, 16);
+                            offset = crlfIdx + 2;
+
+                            if (remainingChunkSize == 0) {
+                                this.isRequestDone = true;
+                                break;
+                            }
+                        } else {
+                            offset = crlfIdx + 2;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                if (remainingChunkSize > 0) {
+                    int availableData = currentBuffer.length - offset;
+                    int bytesToRead = Math.min(remainingChunkSize, availableData);
+
+                    if (bytesToRead > 0) {
+                        this.fileOutputStream.write(currentBuffer, offset, bytesToRead);
+                        this.totalBodyBytes += bytesToRead;
+                        remainingChunkSize -= bytesToRead;
+                        offset += bytesToRead;
+                    }
+
+                    if (remainingChunkSize == 0) {
+                        if (offset + 2 <= currentBuffer.length) {
+                            offset += 2;
+                            remainingChunkSize = -1;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            chunkBuffer.reset();
+            if (offset < currentBuffer.length) {
+                chunkBuffer.write(currentBuffer, offset, currentBuffer.length - offset);
+            }
+        } else {
+            this.fileOutputStream.write(data, 0, data.length);
+            this.totalBodyBytes += data.length;
         }
     }
 
@@ -124,6 +206,21 @@ public class ClientHandler {
         } catch (IOException e) {
             System.out.println(e);
         }
+    }
+
+    private int indexOf(byte[] data, byte[] pattern, int start) {
+        for (int i = start; i <= data.length - pattern.length; i++) {
+            boolean found = true;
+            for (int j = 0; j < pattern.length; j++) {
+                if (data[i + j] != pattern[j]) {
+                    found = false;
+                    break;
+                }
+            }
+            if (found)
+                return i;
+        }
+        return -1;
     }
 
     @Override
