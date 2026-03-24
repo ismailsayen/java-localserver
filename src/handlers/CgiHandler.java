@@ -30,10 +30,13 @@ public class CgiHandler implements HttpHandler {
 
         String method = client.getHttpHeader().getMethod();
         String scriptPath = request.resolveFilePath();
+        System.out.println(scriptPath);
 
         File script = new File(scriptPath);
         if (!script.exists() || script.isDirectory() || !scriptPath.endsWith(".py")) {
             responseBytes = "<h1>404 Not Found</h1>".getBytes();
+            this.client.setIsResponseDone(true);
+            this.client.getKey().interestOps(SelectionKey.OP_WRITE);
             return;
         }
 
