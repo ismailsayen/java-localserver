@@ -72,12 +72,12 @@ public class ClientHandler {
         }
         buf.clear();
 
-        // if (this.totalBodyBytes > this.virtualHosts.getLimitRequestBody()) {
-        //     this.error.error("400", "Data too much large");
-        //     this.deleteTempFile();
-        //     this.client.close();
-        //     return;
-        // }
+        if (this.totalBodyBytes > this.virtualHosts.getLimitRequestBody()) {
+            this.error.error("400", "Data too much large");
+            this.deleteTempFile();
+            this.client.close();
+            return;
+        }
 
         if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
             this.isRequestDone = true;
