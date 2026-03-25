@@ -1,15 +1,14 @@
 package handlers;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.file.Path;
 import java.util.Map;
-
 import Nio.ClientHandler;
 import config.utils.Session;
 import http.HttpHandler;
@@ -18,20 +17,26 @@ import http.HttpRequest;
 public class CgiHandler implements HttpHandler {
 
     private final ClientHandler client;
-    private byte[] responseBytes;
-   
+
+    private Process process;
+    private File outputFile;
+
+    private boolean prepared = false;
+    private FileChannel fileChannel;
+    private long fileSize = 0;
+    private long position = 0;
+    private ByteBuffer headerBuffer;
 
     public CgiHandler(ClientHandler client) {
         this.client = client;
     }
 
+
     @Override
     public void handle() throws Exception {
         HttpRequest request = client.getHttpRequest();
-
         String method = client.getHttpHeader().getMethod();
         String scriptPath = request.resolveFilePath();
-        System.out.println(scriptPath);
 
         File script = new File(scriptPath);
         if (!script.exists() || script.isDirectory() || !scriptPath.endsWith(".py")) {
@@ -39,7 +44,12 @@ public class CgiHandler implements HttpHandler {
             throw new RuntimeException("Not found");
         }
 
+        this.outputFile = File.createTempFile("cgi_out_", ".tmp");
+        this.outputFile.deleteOnExit();
+
         ProcessBuilder pb = new ProcessBuilder("python3", scriptPath);
+        pb.redirectErrorStream(true); 
+        pb.redirectOutput(this.outputFile);
 
         Map<String, String> env = pb.environment();
         env.put("REQUEST_METHOD", method);
@@ -51,67 +61,81 @@ public class CgiHandler implements HttpHandler {
             env.put("CONTENT_LENGTH", contentLength);
         }
 
-        Process process = pb.start();
+        this.process = pb.start();
 
         if (this.client.getBodyFileTempName() != null) {
             try (
                     FileInputStream fis = new FileInputStream("temp_uploads/" + this.client.getBodyFileTempName());
-                    OutputStream os = process.getOutputStream()) {
+                    OutputStream os = this.process.getOutputStream()) {
                 byte[] buffer = new byte[8096];
                 int read;
-
                 while ((read = fis.read(buffer)) != -1) {
                     os.write(buffer, 0, read);
                 }
-
                 os.flush();
             }
+        } else {
+            this.process.getOutputStream().close();
         }
 
-        BufferedReader errorReader = new BufferedReader(
-                new InputStreamReader(process.getErrorStream()));
-        String err;
-        while ((err = errorReader.readLine()) != null) {
-            System.out.println("CGI ERROR: " + err);
-        }
-
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream()));
-
-        StringBuilder output = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            output.append(line).append("\r\n");
-        }
-
-        this.responseBytes = output.toString().getBytes();
-        this.client.setIsResponseDone(true);
         this.client.getKey().interestOps(SelectionKey.OP_WRITE);
     }
+
 
     @Override
     public void response() throws IOException {
-        this.client.setIsResponseDone(true);
-        this.client.getKey().interestOps(SelectionKey.OP_WRITE);
 
-        if (this.responseBytes == null) {
+        if (process != null && this.process.isAlive()) {
             return;
         }
 
-        Session session = client.getHttpRequest().getSession();
+        if (!prepared) {
+            this.fileSize = this.outputFile.length();
+            this.fileChannel = FileChannel.open(Path.of(this.outputFile.getPath()));
 
-        String httpResponse = "HTTP/1.1 200 OK\r\n" +
-                "Content-Type: text/html\r\n" +
-                "Set-Cookie: SESSION_ID=" + session.getId() + "; Path=/\r\n" +
-                "Content-Length: " + responseBytes.length + "\r\n" +
-                "\r\n";
+            Session session = client.getHttpRequest().getSession();
+            String headers = "HTTP/1.1 200 OK\r\n" +
+                    "Content-Type: text/html\r\n" +
+                    "Set-Cookie: SESSION_ID=" + session.getId() + "; Path=/\r\n" +
+                    "Content-Length: " + this.fileSize + "\r\n" +
+                    "Connection: close\r\n\r\n";
 
-        ByteBuffer buffer = ByteBuffer.allocate(httpResponse.length() + responseBytes.length);
-        buffer.put(httpResponse.getBytes());
-        buffer.put(responseBytes);
-        buffer.flip();
+            this.headerBuffer = ByteBuffer.wrap(headers.getBytes());
+            this.prepared = true;
+            return;
+        }
 
-        this.client.getClient().write(buffer);
+        if (this.headerBuffer != null && this.headerBuffer.hasRemaining()) {
+            this.client.getClient().write(this.headerBuffer);
+            if (this.headerBuffer.hasRemaining()) {
+                return;
+            }
+            this.headerBuffer = null;
+        }
+
+        if (this.fileChannel != null) {
+            long chunk = Math.min(64 * 1024, this.fileSize - this.position);
+            long transferred = this.fileChannel.transferTo(this.position, chunk, this.client.getClient());
+
+            if (transferred > 0) {
+                this.position += transferred;
+            }
+
+            if (this.position >= this.fileSize) {
+                finish();
+            }
+        }
     }
 
+    private void finish() throws IOException {
+        if (this.fileChannel != null) {
+            this.fileChannel.close();
+        }
+        if (this.outputFile != null) {
+            this.outputFile.delete();
+        }
+
+        this.client.setIsResponseDone(true);
+        this.client.getKey().cancel();
+    }
 }

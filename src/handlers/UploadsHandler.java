@@ -1,5 +1,8 @@
 package handlers;
 
+import Nio.ClientHandler;
+import config.utils.Session;
+import http.HttpHandler;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -8,10 +11,6 @@ import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
-import Nio.ClientHandler;
-import config.utils.Session;
-import http.HttpHandler;
 
 public class UploadsHandler implements HttpHandler {
 
@@ -66,7 +65,7 @@ public class UploadsHandler implements HttpHandler {
 
         Path bodyPath = Paths.get("temp_uploads", this.client.getBodyFileTempName());
         if (!Files.exists(bodyPath)) {
-            this.client.getClient().close();
+            this.client.getHttpRequest().setStatus("404");
             throw new RuntimeException("Body file not found");
         }
 
@@ -128,7 +127,7 @@ public class UploadsHandler implements HttpHandler {
             if (currentFile != null)
                 currentFile.close();
         } catch (Exception e) {
-            System.out.println(e);
+            throw new RuntimeException("Body file not found");
         }
     }
 
@@ -149,6 +148,8 @@ public class UploadsHandler implements HttpHandler {
         if (!Files.exists(directory)) {
             Files.createDirectories(directory);
         }
+
+        fileName = fileName.replaceAll("\\s+", "_");
 
         String baseName = fileName;
         String extension = "";

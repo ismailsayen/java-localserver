@@ -1,13 +1,12 @@
 package config.model;
 
+import DTO.Route;
+import DTO.Server;
 import config.utils.Validators;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-
-import DTO.Route;
-import DTO.Server;
 
 public class WebServerConfig {
     private final LinkedHashSet<Object> servers;
@@ -25,7 +24,7 @@ public class WebServerConfig {
             Server server = Validators.ServerValidator(ser);
 
             if (server == null) {
-                System.out.println("khritiha hna =>\n" + ser);
+                System.err.println("[ERROR] Invalid server configuration: " + ser);
                 continue;
             }
 
@@ -59,11 +58,10 @@ public class WebServerConfig {
 
             Route route = Validators.routeValidator(rt);
             if (route == null) {
-                System.out.println("khritiha f had route =>\n" + route);
+                System.err.println("[ERROR] Invalid route configuration: " + rt);
                 continue;
             }
             routeList.add(route);
-
         }
         return routeList;
     }
