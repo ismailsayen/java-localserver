@@ -40,11 +40,12 @@ public class Validators {
         while (it.hasNext()) {
             Object obj = it.next();
 
-            if (!(obj instanceof Long)) {
+            if (!(obj instanceof Number)) {
                 return null;
             }
 
-            Long p = (Long) obj;
+            Number n = (Number) obj;
+            long p = n.longValue();
             if (p < 1024 || p > 65535) {
                 it.remove();
             }
@@ -68,8 +69,14 @@ public class Validators {
                 (Boolean) ser.getOrDefault("defaultServer", false));
 
         // limitRequestBody
-        server.setLimitRequestBody(
-                (Long) ser.getOrDefault("limitRequestBody", 20000000L));
+
+        Object value = ser.getOrDefault("limitRequestBody", 20000000L);
+
+        if (!(value instanceof Number)) {
+            throw new IllegalArgumentException("limitRequestBody must be a number");
+        }
+
+        server.setLimitRequestBody(((Number) value).longValue());
 
         // errorPages
         if (ser.get("errorPages") instanceof Map) {
@@ -105,8 +112,8 @@ public class Validators {
         }
 
         // ===== directoryListing =====
-            route.setDirectoryListing((Boolean) rt.getOrDefault("directoryListing",false));
-        
+        route.setDirectoryListing((Boolean) rt.getOrDefault("directoryListing", false));
+
         // ===== redirectTo =====
         if (rt.get("redirectTo") != null) {
 
@@ -116,7 +123,13 @@ public class Validators {
         // ===== redirectStatusCode =====
         if (rt.get("redirectStatusCode") != null) {
 
-            route.setRedirectStatusCode((Long) rt.get("redirectStatusCode"));
+            Object value = rt.get("redirectStatusCode");
+
+            if (!(value instanceof Number)) {
+                throw new IllegalArgumentException("redirectStatusCode must be a number");
+            }
+
+            route.setRedirectStatusCode(((Number) value).longValue());
         }
 
         // ===== cgi =====

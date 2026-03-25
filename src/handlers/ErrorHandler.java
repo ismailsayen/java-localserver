@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class ErrorHandler {
 
-    private ClientHandler client;
+    private final ClientHandler client;
     private ByteBuffer buffer;
 
     public ErrorHandler(ClientHandler client) {
@@ -17,7 +17,7 @@ public class ErrorHandler {
     }
 
     public void error(String statusCode, String msg) {
-        Map<String, String> errorPages = this.client.getVirtualHosts().getErrorPages();
+        Map<String, String> errorPages = this.client.getServer().getErrorPages();
 
         String code = String.valueOf(statusCode);
 
@@ -53,7 +53,9 @@ public class ErrorHandler {
                 client.getClient().write(buffer);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            
         }
     }
+
+    
 }
