@@ -58,7 +58,7 @@
           "GET",
           "DELETE"
         ],
-        "directoryListing": false
+        "directoryListing": true
       }
     ]
   }
