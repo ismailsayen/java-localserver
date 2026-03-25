@@ -81,13 +81,12 @@ public class ClientHandler {
         }
         buf.clear();
 
-        // if (this.server != null && this.totalBodyBytes >
-        // this.server.getLimitRequestBody()) {
-        // this.error.error("400", "Data too much large");
-        // this.deleteTempFile();
-        // this.client.close();
-        // return;
-        // }
+        if (!this.isMultiPart && this.server != null && this.totalBodyBytes > this.server.getLimitRequestBody()) {
+            this.error.error("414", "Payload Too Large");
+            this.deleteTempFile();
+            this.client.close();
+            return;
+        }
 
         if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
             this.isRequestDone = true;
@@ -481,5 +480,9 @@ public class ClientHandler {
 
     public void setIsRequestDone(boolean value) {
         this.isRequestDone = value;
+    }
+
+    public Long getTotalBodyBytes() {
+        return this.totalBodyBytes;
     }
 }

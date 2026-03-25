@@ -35,8 +35,15 @@ public class UploadsHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        processMultipartBody(this.client.getByteArrayOutputStream().toByteArray());
+        if (this.client.getTotalBodyBytes() <= this.client.getServer().getLimitRequestBody()) {
+            processMultipartBody(this.client.getByteArrayOutputStream().toByteArray());
+        }
         if (this.client.getIsRequestDone()) {
+            if (this.client.getTotalBodyBytes() > this.client.getServer().getLimitRequestBody()) {
+                this.deleteFiles();
+                this.client.getHttpRequest().setStatus("413");
+                throw new RuntimeException("Payload Too Large");
+            }
             this.client.setIsResponseDone(true);
             client.getKey().interestOps(SelectionKey.OP_WRITE);
         }
@@ -200,5 +207,19 @@ public class UploadsHandler implements HttpHandler {
         start += 10;
         int end = headers.indexOf("\"", start);
         return headers.substring(start, end);
+    }
+
+    private void deleteFiles() throws IOException {
+        String root = this.client.getHttpRequest().getRoute().getRoot();
+        Path directory = Paths.get(root);
+
+        if (!Files.exists(directory)) {
+            return;
+        }
+
+        for (String fileName : this.filesName) {
+            Path filePath = directory.resolve(fileName);
+            Files.deleteIfExists(filePath);
+        }
     }
 }
