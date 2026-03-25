@@ -63,11 +63,6 @@ public class ClientHandler {
         if (bytesRead == 0)
             return;
 
-        // if (this.totalBodyBytes > this.virtualHosts.getLimitRequestBody()) {
-        //     // Error_body_large
-        //     return;
-        // }
-
         buf.flip();
         if (!this.isHeadersFound) {
             byteArrayOutputStream.write(buf.array(), 0, bytesRead);
@@ -76,6 +71,13 @@ public class ClientHandler {
             this.readBody(Arrays.copyOf(this.buf.array(), bytesRead));
         }
         buf.clear();
+
+        // if (this.totalBodyBytes > this.virtualHosts.getLimitRequestBody()) {
+        //     this.error.error("400", "Data too much large");
+        //     this.deleteTempFile();
+        //     this.client.close();
+        //     return;
+        // }
 
         if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
             this.isRequestDone = true;
@@ -89,6 +91,7 @@ public class ClientHandler {
                 this.httpRequest.executeHandler(this);
             } catch (Exception e) {
                 this.error.error(httpRequest.getStatus(), e.getMessage());
+                this.deleteTempFile();
                 this.client.close();
             }
         }
@@ -102,10 +105,7 @@ public class ClientHandler {
             this.client.close();
         }
         if (this.isResponseDone) {
-            if (this.bodyTempFileName != null) {
-                Path bodyPath = Paths.get("temp_uploads", this.bodyTempFileName);
-                Files.deleteIfExists(bodyPath);
-            }
+            this.deleteTempFile();
             this.client.close();
         }
     }
@@ -235,6 +235,13 @@ public class ClientHandler {
                 return i;
         }
         return -1;
+    }
+
+    private void deleteTempFile() throws IOException {
+        if (this.bodyTempFileName != null) {
+            Path bodyPath = Paths.get("temp_uploads", this.bodyTempFileName);
+            Files.deleteIfExists(bodyPath);
+        }
     }
 
     @Override

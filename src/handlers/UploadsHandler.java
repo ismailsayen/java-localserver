@@ -65,7 +65,6 @@ public class UploadsHandler implements HttpHandler {
 
         Path bodyPath = Paths.get("temp_uploads", this.client.getBodyFileTempName());
         if (!Files.exists(bodyPath)) {
-            this.client.getClient().close();
             throw new RuntimeException("Body file not found");
         }
 
