@@ -63,10 +63,10 @@ public class ClientHandler {
         if (bytesRead == 0)
             return;
 
-        if (this.totalBodyBytes > this.virtualHosts.getLimitRequestBody()) {
-            // Error_body_large
-            return;
-        }
+        // if (this.totalBodyBytes > this.virtualHosts.getLimitRequestBody()) {
+        //     // Error_body_large
+        //     return;
+        // }
 
         buf.flip();
         if (!this.isHeadersFound) {
