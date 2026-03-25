@@ -13,8 +13,13 @@
     "defaultServer": true,
     "limitSize": 1024,
     "errorPages": {
+      "400": "./custom_error_pages/400.html",
+      "401": "./custom_error_pages/401.html",
+      "403": "./custom_error_pages/403.html",
       "404": "./custom_error_pages/404.html",
-      "403": "./custom_error_pages/403.html"
+      "405": "./custom_error_pages/405.html",
+      "409": "./custom_error_pages/409.html",
+      "500": "./custom_error_pages/500.html"
     },
     "routes": [
       {
