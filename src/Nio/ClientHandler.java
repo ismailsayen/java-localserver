@@ -81,21 +81,22 @@ public class ClientHandler {
         }
         buf.clear();
 
-        // if (this.server != null && this.totalBodyBytes > this.server.getLimitRequestBody()) {
-        //     this.error.error("400", "Data too much large");
-        //     this.deleteTempFile();
-        //     this.client.close();
-        //     return;
+        // if (this.server != null && this.totalBodyBytes >
+        // this.server.getLimitRequestBody()) {
+        // this.error.error("400", "Data too much large");
+        // this.deleteTempFile();
+        // this.client.close();
+        // return;
         // }
+
+        if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
+            this.isRequestDone = true;
+        }
 
         try {
             if (this.isMultiPart) {
                 this.httpRequest.executeHandler(this);
             } else {
-                if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
-                    this.isRequestDone = true;
-                }
-
                 if (this.httpRequest != null && this.isRequestDone) {
                     if (this.fileOutputStream != null) {
                         this.fileOutputStream.close();
@@ -237,7 +238,56 @@ public class ClientHandler {
             this.byteArrayOutputStream.write(data, 0, data.length);
             this.totalBodyBytes += data.length;
         } else {
+            chunkBuffer.write(data);
+            byte[] currentBuffer = chunkBuffer.toByteArray();
+            int offset = 0;
 
+            while (offset < currentBuffer.length) {
+                if (remainingChunkSize == -1) {
+                    int crlfIdx = indexOf(currentBuffer, "\r\n".getBytes(), offset);
+                    if (crlfIdx != -1) {
+                        String sizeStr = new String(Arrays.copyOfRange(currentBuffer, offset, crlfIdx)).trim();
+                        if (!sizeStr.isEmpty()) {
+                            remainingChunkSize = Integer.parseInt(sizeStr, 16);
+                            offset = crlfIdx + 2;
+
+                            if (remainingChunkSize == 0) {
+                                this.isRequestDone = true;
+                                break;
+                            }
+                        } else {
+                            offset = crlfIdx + 2;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                if (remainingChunkSize > 0) {
+                    int availableData = currentBuffer.length - offset;
+                    int bytesToRead = Math.min(remainingChunkSize, availableData);
+
+                    if (bytesToRead > 0) {
+                        this.byteArrayOutputStream.write(currentBuffer, offset, bytesToRead);
+                        this.totalBodyBytes += bytesToRead;
+                        remainingChunkSize -= bytesToRead;
+                        offset += bytesToRead;
+                    }
+
+                    if (remainingChunkSize == 0) {
+                        if (offset + 2 <= currentBuffer.length) {
+                            offset += 2;
+                            remainingChunkSize = -1;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            chunkBuffer.reset();
+            if (offset < currentBuffer.length) {
+                chunkBuffer.write(currentBuffer, offset, currentBuffer.length - offset);
+            }
         }
     }
 
@@ -423,5 +473,13 @@ public class ClientHandler {
 
     public void setChunkBuffer(ByteArrayOutputStream chunkBuffer) {
         this.chunkBuffer = chunkBuffer;
+    }
+
+    public boolean getIsRequestDone() {
+        return this.isRequestDone;
+    }
+
+    public void setIsRequestDone(boolean value) {
+        this.isRequestDone = value;
     }
 }

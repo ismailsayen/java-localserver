@@ -5,6 +5,7 @@ import config.utils.Session;
 import http.HttpHandler;
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.ArrayList;
@@ -34,10 +35,11 @@ public class UploadsHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        this.filesName.clear();
         processMultipartBody(this.client.getByteArrayOutputStream().toByteArray());
-        // this.client.setIsResponseDone(true);
-        // client.getKey().interestOps(SelectionKey.OP_WRITE);
+        if (this.client.getIsRequestDone()) {
+            this.client.setIsResponseDone(true);
+            client.getKey().interestOps(SelectionKey.OP_WRITE);
+        }
     }
 
     @Override
@@ -69,6 +71,7 @@ public class UploadsHandler implements HttpHandler {
 
     public void processMultipartBody(byte[] chunk) throws IOException {
         if (!isStartProcessing) {
+            this.filesName.clear();
             String contentType = this.client.getHttpHeader().getHeaders().get("content-type");
             String boundary = extractBoundary(contentType);
             this.boundaryBytes = ("\r\n--" + boundary).getBytes(StandardCharsets.UTF_8);
