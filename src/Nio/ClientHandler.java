@@ -2,6 +2,7 @@ package Nio;
 
 import DTO.Server;
 import handlers.ErrorHandler;
+import handlers.UploadsHandler;
 import http.HttpHeader;
 import http.HttpRequest;
 import java.io.ByteArrayOutputStream;
@@ -36,10 +37,11 @@ public class ClientHandler {
     private Boolean isStartReading;
     private Boolean isChunked;
     private Boolean isBodyExists;
-    private ByteArrayOutputStream chunkBuffer = new ByteArrayOutputStream();
+    private ByteArrayOutputStream chunkBuffer;
     private int remainingChunkSize = -1;
     private boolean isRequestDone = false;
     private ErrorHandler error;
+    private boolean isMultiPart;
 
     public ClientHandler(SocketChannel client, SelectionKey key, List<Server> virtualHosts) {
         this.client = client;
@@ -51,6 +53,7 @@ public class ClientHandler {
         this.isBodyExists = false;
         buf = ByteBuffer.allocate(8096);
         this.byteArrayOutputStream = new ByteArrayOutputStream();
+        this.chunkBuffer = new ByteArrayOutputStream();
         this.error = new ErrorHandler(this);
     }
 
@@ -70,33 +73,40 @@ public class ClientHandler {
             byteArrayOutputStream.write(buf.array(), 0, bytesRead);
             this.readHeaders(byteArrayOutputStream);
         } else if (this.isBodyExists) {
-            this.readBody(Arrays.copyOf(this.buf.array(), bytesRead));
+            if (!this.isMultiPart) {
+                this.readBody(Arrays.copyOf(this.buf.array(), bytesRead));
+            } else {
+                this.readMultiPartBody(Arrays.copyOf(this.buf.array(), bytesRead));
+            }
         }
         buf.clear();
 
-        if (this.totalBodyBytes > this.server.getLimitRequestBody()) {
-            this.error.error("400", "Data too much large");
+        // if (this.server != null && this.totalBodyBytes > this.server.getLimitRequestBody()) {
+        //     this.error.error("400", "Data too much large");
+        //     this.deleteTempFile();
+        //     this.client.close();
+        //     return;
+        // }
+
+        try {
+            if (this.isMultiPart) {
+                this.httpRequest.executeHandler(this);
+            } else {
+                if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
+                    this.isRequestDone = true;
+                }
+
+                if (this.httpRequest != null && this.isRequestDone) {
+                    if (this.fileOutputStream != null) {
+                        this.fileOutputStream.close();
+                    }
+                    this.httpRequest.executeHandler(this);
+                }
+            }
+        } catch (Exception e) {
+            this.error.error(httpRequest.getStatus(), e.getMessage());
             this.deleteTempFile();
             this.client.close();
-            return;
-        }
-
-
-        if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
-            this.isRequestDone = true;
-        }
-
-        if (this.httpRequest != null && this.isRequestDone) {
-            try {
-                if (this.fileOutputStream != null) {
-                    this.fileOutputStream.close();
-                }
-                this.httpRequest.executeHandler(this);
-            } catch (Exception e) {
-                this.error.error(httpRequest.getStatus(), e.getMessage());
-                this.deleteTempFile();
-                this.client.close();
-            }
         }
     }
 
@@ -139,57 +149,23 @@ public class ClientHandler {
                 this.httpRequest.HandleRequest(this);
                 byteArrayOutputStream.reset();
                 if (this.isBodyExists) {
+                    if (this.httpRequest.getHnadler() instanceof UploadsHandler) {
+                        this.isMultiPart = true;
+                    }
                     int bodyStart = index + 4;
                     if (bodyStart < data.length) {
                         byte[] bodyPart = Arrays.copyOfRange(data, bodyStart, data.length);
-                        this.readBody(bodyPart);
+                        if (!this.isMultiPart) {
+                            this.readBody(bodyPart);
+                        } else {
+                            this.readMultiPartBody(bodyPart);
+                        }
                     }
                 }
             } catch (Exception e) {
                 this.error.error(httpRequest.getStatus(), e.getMessage());
             }
         }
-    }
-
-    private String getHostFromHeader() {
-        String host = this.headerHttp.getHeaders().get("host");
-
-        if (host == null)
-            return null;
-
-        // remove port if exists (example: test.com:80)
-        if (host.contains(":")) {
-            host = host.split(":")[0];
-        }
-
-        return host.trim();
-    }
-
-    private Server selectServer() {
-        String host = getHostFromHeader();
-
-        if (host == null) {
-            return getDefaultServer(); // default server
-        }
-
-        for (Server s : virtualHosts) {
-            if (host.equalsIgnoreCase(s.getName())) {
-                return s;
-            }
-        }
-
-        return getDefaultServer(); // fallback
-    }
-
-    private Server getDefaultServer() {
-
-        for (Server s : virtualHosts) {
-            if (s.getDefaultServer()) {
-                return s;
-            }
-        }
-
-        return virtualHosts.get(0);
     }
 
     private void readBody(byte[] data) throws IOException {
@@ -253,6 +229,57 @@ public class ClientHandler {
             this.fileOutputStream.write(data, 0, data.length);
             this.totalBodyBytes += data.length;
         }
+    }
+
+    private void readMultiPartBody(byte[] data) throws IOException {
+        this.byteArrayOutputStream.reset();
+        if (!this.isChunked) {
+            this.byteArrayOutputStream.write(data, 0, data.length);
+            this.totalBodyBytes += data.length;
+        } else {
+
+        }
+    }
+
+    private String getHostFromHeader() {
+        String host = this.headerHttp.getHeaders().get("host");
+
+        if (host == null)
+            return null;
+
+        // remove port if exists (example: test.com:80)
+        if (host.contains(":")) {
+            host = host.split(":")[0];
+        }
+
+        return host.trim();
+    }
+
+    private Server selectServer() {
+        String host = getHostFromHeader();
+
+        if (host == null) {
+            return getDefaultServer(); // default server
+        }
+
+        for (Server s : virtualHosts) {
+            if (host.equalsIgnoreCase(s.getName())) {
+                return s;
+            }
+        }
+
+        return getDefaultServer(); // fallback
+    }
+
+    private Server getDefaultServer() {
+
+        for (Server s : virtualHosts) {
+            if (s.getDefaultServer()) {
+                return s;
+            }
+        }
+
+        return virtualHosts.get(0);
     }
 
     private void createdFileOutputStream() {
