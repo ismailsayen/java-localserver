@@ -19,6 +19,7 @@
       "404": "./custom_error_pages/404.html",
       "405": "./custom_error_pages/405.html",
       "409": "./custom_error_pages/409.html",
+      "413": "./custom_error_pages/413.html",
       "500": "./custom_error_pages/500.html"
     },
     "routes": [
