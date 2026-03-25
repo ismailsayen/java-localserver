@@ -1,12 +1,11 @@
 package handlers;
 
+import Nio.ClientHandler;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-
-import Nio.ClientHandler;
 
 public class ErrorHandler {
 
@@ -33,19 +32,15 @@ public class ErrorHandler {
                 body = "<h1>" + statusCode + "</h1><p>" + msg + "</p>";
             }
         } catch (IOException e) {
-            body = "<h1>500 Internal Server Error</h1>";
-            statusCode = "500";
+            body = "<h1>" + statusCode + "</h1><p>" + msg + "</p>";
         }
 
         sendResponse(String.valueOf(statusCode), "text/html", body);
         client.setIsResponseDone(true);
     }
 
-
-
     public void sendResponse(String code, String contentType, String body) {
-        String header =
-                "HTTP/1.1 " + code + " \r\n" +
+        String header = "HTTP/1.1 " + code + " \r\n" +
                 "Content-Type: " + contentType + "\r\n" +
                 "Content-Length: " + body.getBytes().length + "\r\n" +
                 "\r\n";
