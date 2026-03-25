@@ -7,8 +7,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class NioServer {
     private Selector selector;
@@ -16,6 +19,7 @@ public class NioServer {
 
     public void start(List<Server> serverConfig) throws IOException {
         selector = Selector.open();
+
         createTcpListeners(serverConfig);
 
         while (true) {
@@ -34,7 +38,7 @@ public class NioServer {
 
                 if (key.isAcceptable()) {
                     ServerSocketChannel channel = (ServerSocketChannel) key.channel();
-                    Server virtualHost = (Server) key.attachment();
+                    List<Server> virtualHost = (List<Server>) key.attachment();
                     handleAccept(channel, virtualHost);
                     continue;
                 }
@@ -51,7 +55,7 @@ public class NioServer {
         }
     }
 
-    private void handleAccept(ServerSocketChannel channel, Server virtualHost)
+    private void handleAccept(ServerSocketChannel channel, List<Server> virtualHost)
             throws IOException {
         SocketChannel client = channel.accept();
         client.configureBlocking(false);
@@ -71,13 +75,31 @@ public class NioServer {
     }
 
     private void createTcpListeners(List<Server> serverConfig) throws IOException {
-        for (Server config : serverConfig) {
-            for (Object port : config.getPort()) {
-                ServerSocketChannel scc = ServerSocketChannel.open();
-                scc.configureBlocking(false);
-                scc.bind(new InetSocketAddress(Integer.parseInt("" + port)));
-                scc.register(selector, SelectionKey.OP_ACCEPT, config);
+        Map<String, List<Server>> grouped = groupServers(serverConfig);
+        for (Map.Entry<String, List<Server>> entry : grouped.entrySet()) {
+
+            String[] parts = entry.getKey().split(":");
+            String host = parts[0];
+            int port = Integer.parseInt(parts[1]);
+
+            ServerSocketChannel scc = ServerSocketChannel.open();
+            scc.configureBlocking(false);
+            scc.bind(new InetSocketAddress(host, port));
+
+            scc.register(selector, SelectionKey.OP_ACCEPT, entry.getValue());
+        }
+    }
+
+    private Map<String, List<Server>> groupServers(List<Server> configs) {
+        Map<String, List<Server>> map = new HashMap<>();
+
+        for (Server s : configs) {
+            for (Object port : s.getPort()) {
+                String key = s.getHost() + ":" + port;
+                map.computeIfAbsent(key, k -> new ArrayList<>()).add(s);
             }
         }
+
+        return map;
     }
 }

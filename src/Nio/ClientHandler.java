@@ -15,11 +15,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 public class ClientHandler {
     private SocketChannel client;
-    private Server virtualHosts;
+    private List<Server> virtualHosts;
+    private Server server;
     private SelectionKey key;
     private HttpRequest httpRequest;
     private HttpHeader headerHttp;
@@ -39,7 +41,7 @@ public class ClientHandler {
     private boolean isRequestDone = false;
     private ErrorHandler error;
 
-    public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
+    public ClientHandler(SocketChannel client, SelectionKey key, List<Server> virtualHosts) {
         this.client = client;
         this.virtualHosts = virtualHosts;
         this.key = key;
@@ -72,12 +74,13 @@ public class ClientHandler {
         }
         buf.clear();
 
-        if (this.totalBodyBytes > this.virtualHosts.getLimitRequestBody()) {
+        if (this.totalBodyBytes > this.server.getLimitRequestBody()) {
             this.error.error("400", "Data too much large");
             this.deleteTempFile();
             this.client.close();
             return;
         }
+
 
         if (this.contentLength != null && totalBodyBytes >= this.contentLength) {
             this.isRequestDone = true;
@@ -118,14 +121,15 @@ public class ClientHandler {
         if (index != -1) {
             this.isHeadersFound = true;
             this.headerHttp = HttpHeader.parseHeaders(message.substring(0, index));
-            this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
+            this.server = selectServer();
+            this.httpRequest = new HttpRequest(headerHttp, this.server);
             String cl = this.headerHttp.getHeaders().get("content-length");
             String te = this.headerHttp.getHeaders().get("transfer-encoding");
             if (te != null && te.equals("chunked")) {
                 this.isChunked = true;
                 this.isBodyExists = true;
             } else if (cl != null) {
-                this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
+                this.contentLength = Long.valueOf(this.headerHttp.getHeaders().get("content-length"));
                 this.isBodyExists = true;
             } else {
                 this.isRequestDone = true;
@@ -142,9 +146,50 @@ public class ClientHandler {
                     }
                 }
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                this.error.error(httpRequest.getStatus(), e.getMessage());
             }
         }
+    }
+
+    private String getHostFromHeader() {
+        String host = this.headerHttp.getHeaders().get("host");
+
+        if (host == null)
+            return null;
+
+        // remove port if exists (example: test.com:80)
+        if (host.contains(":")) {
+            host = host.split(":")[0];
+        }
+
+        return host.trim();
+    }
+
+    private Server selectServer() {
+        String host = getHostFromHeader();
+
+        if (host == null) {
+            return getDefaultServer(); // default server
+        }
+
+        for (Server s : virtualHosts) {
+            if (host.equalsIgnoreCase(s.getName())) {
+                return s;
+            }
+        }
+
+        return getDefaultServer(); // fallback
+    }
+
+    private Server getDefaultServer() {
+
+        for (Server s : virtualHosts) {
+            if (s.getDefaultServer()) {
+                return s;
+            }
+        }
+
+        return virtualHosts.get(0);
     }
 
     private void readBody(byte[] data) throws IOException {
@@ -257,12 +302,20 @@ public class ClientHandler {
         this.client = client;
     }
 
-    public Server getVirtualHosts() {
+    public List<Server> getVirtualHosts() {
         return virtualHosts;
     }
 
-    public void setVirtualHosts(Server virtualHosts) {
+    public void setVirtualHosts(List<Server> virtualHosts) {
         this.virtualHosts = virtualHosts;
+    }
+
+    public Server getServer() {
+        return this.server;
+    }
+
+    public void setServer(Server server) {
+        this.server = server;
     }
 
     public HttpRequest getHttpRequest() {
@@ -327,5 +380,21 @@ public class ClientHandler {
 
     public void setErrorPages(ErrorHandler error) {
         this.error = error;
+    }
+
+    public ByteBuffer getBuf() {
+        return buf;
+    }
+
+    public void setBuf(ByteBuffer buf) {
+        this.buf = buf;
+    }
+
+    public ByteArrayOutputStream getChunkBuffer() {
+        return chunkBuffer;
+    }
+
+    public void setChunkBuffer(ByteArrayOutputStream chunkBuffer) {
+        this.chunkBuffer = chunkBuffer;
     }
 }

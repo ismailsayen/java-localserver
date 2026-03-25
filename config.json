@@ -1,17 +1,11 @@
 [
   {
     "name": "primary.local",
-    "host": "127.0.0.1",
-    "port": [
-      8081,
-      8023,
-      8082,
-      8084,
-      8088,
-      8092
-    ],
+    "host": "127.0.0.2",
+    "port": [8081],
+    "limitSize": 1024,
     "defaultServer": true,
-    "limitSize": 5344512111111111114321351745613,
+
     "errorPages": {
       "400": "./custom_error_pages/400.html",
       "401": "./custom_error_pages/401.html",
@@ -26,55 +20,38 @@
       {
         "path": "/",
         "root": "./www/html/primary",
-        "methods": [
-          "GET"
-        ],
+        "methods": ["GET"],
         "index": "index.html"
       },
       {
         "path": "/uploads",
         "root": "./www/uploads",
-        "methods": [
-          "GET",
-          "POST",
-          "DELETE"
-        ]
+        "methods": ["GET", "POST", "DELETE"]
       },
       {
         "path": "/cgi-bin",
         "root": "./www/scripts",
-        "methods": [
-          "GET",
-          "POST"
-        ],
+        "methods": ["GET", "POST"],
         "cgiExtension": ".py"
       },
       {
         "path": "/redirect",
-        "methods": [
-          "GET"
-        ],
+        "methods": ["GET"],
         "redirectTo": "/www",
         "redirectStatusCode": 302
       },
       {
         "path": "/www",
         "root": "./www/",
-        "methods": [
-          "GET",
-          "DELETE"
-        ],
+        "methods": ["GET", "DELETE"],
         "directoryListing": true
       }
     ]
   },
-   {
-    "name": "primary.local",
+  {
+    "name": "proxy",
     "host": "127.0.0.2",
-    "port": [
-      3000
-    ],
-    "defaultServer": true,
+    "port": [8081],
     "limitSize": 5344512111111111114321351745613,
     "errorPages": {
       "400": "./custom_error_pages/400.html",
@@ -90,46 +67,38 @@
       {
         "path": "/",
         "root": "./www/html/primary",
-        "methods": [
-          "GET"
-        ],
-        "index": "index.html"
+        "methods": ["GET"],
+        "index": "a.html"
       },
       {
         "path": "/uploads",
         "root": "./www/uploads",
-        "methods": [
-          "GET",
-          "POST",
-          "DELETE"
-        ]
+        "methods": ["GET", "POST", "DELETE"]
       },
       {
         "path": "/cgi-bin",
         "root": "./www/scripts",
-        "methods": [
-          "GET",
-          "POST"
-        ],
+        "methods": ["GET", "POST"],
         "cgiExtension": ".py"
       },
       {
         "path": "/redirect",
-        "methods": [
-          "GET"
-        ],
+        "methods": ["GET"],
         "redirectTo": "/www",
         "redirectStatusCode": 302
       },
       {
         "path": "/www",
         "root": "./www/",
-        "methods": [
-          "GET",
-          "DELETE"
-        ],
+        "methods": ["GET", "DELETE"],
         "directoryListing": true
       }
     ]
+  },
+  {
+    "name": "aaa",
+    "host": "127.0.0.2",
+    "port": [8081],
+    "routes": []
   }
 ]
