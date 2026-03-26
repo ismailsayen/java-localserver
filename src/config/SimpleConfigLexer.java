@@ -20,6 +20,7 @@ public class SimpleConfigLexer {
     public Object tokenize() throws FormatException {
         skipWhitespace();
         Object result = parseValue();
+    
         if (!(result instanceof LinkedHashSet)) {
             throw new FormatException("Expected Array of Object");
         }
@@ -174,11 +175,11 @@ public class SimpleConfigLexer {
         if (number.contains(".") || number.contains("e") || number.contains("E")) {
             return Double.valueOf(number);
         }
-
         try {
             return Integer.valueOf(number);
         } catch (NumberFormatException e1) {
             try {
+
                 return Long.valueOf(number);
             } catch (NumberFormatException e2) {
                 return new BigInteger(number);

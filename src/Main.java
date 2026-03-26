@@ -2,6 +2,7 @@ import DTO.Server;
 import Nio.NioServer;
 import config.Parser;
 import config.model.WebServerConfig;
+import customError.FormatException;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -12,50 +13,39 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
 
-        Object config = new Parser("config.json").parse();
-        List<Server> servers = new WebServerConfig((LinkedHashSet<Object>) config).setup();
-
-        printWelcome();
-        printServerUrls(servers);
-
-        NioServer nioServer = new NioServer();
-        nioServer.start(servers);
+        try {
+            Object config = new Parser("config.json").parse();
+            List<Server> servers = new WebServerConfig((LinkedHashSet<Object>) config).setup();
+            if(servers.isEmpty()){
+                System.out.println("No server to run.");
+                return;
+            }
+            printWelcome();
+            System.out.println();
+            NioServer nioServer = new NioServer();
+            nioServer.start(servers);
+        } catch (FormatException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private static void printWelcome() {
-    System.out.println(
-            GREEN +
-            """
+        System.out.println(
+                GREEN +
+                        """
 
 
-           ██╗ █████╗ ██╗   ██╗ █████╗     ██╗      ██████╗  ██████╗ █████╗ ██╗     ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗
-           ██║██╔══██╗██║   ██║██╔══██╗    ██║     ██╔═══██╗██╔════╝██╔══██╗██║     ██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
-           ██║███████║██║   ██║███████║    ██║     ██║   ██║██║     ███████║██║     ███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝
-      ██   ██║██╔══██║╚██╗ ██╔╝██╔══██║    ██║     ██║   ██║██║     ██╔══██║██║     ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
-      ╚█████╔╝██║  ██║ ╚████╔╝ ██║  ██║    ███████╗╚██████╔╝╚██████╗██║  ██║███████╗███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
-       ╚════╝ ╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝    ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
+                                     ██╗ █████╗ ██╗   ██╗ █████╗     ██╗      ██████╗  ██████╗ █████╗ ██╗     ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗
+                                     ██║██╔══██╗██║   ██║██╔══██╗    ██║     ██╔═══██╗██╔════╝██╔══██╗██║     ██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
+                                     ██║███████║██║   ██║███████║    ██║     ██║   ██║██║     ███████║██║     ███████╗█████╗  ██████╔╝██║   ██║█████╗  ██████╔╝
+                                ██   ██║██╔══██║╚██╗ ██╔╝██╔══██║    ██║     ██║   ██║██║     ██╔══██║██║     ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██╔══╝  ██╔══██╗
+                                ╚█████╔╝██║  ██║ ╚████╔╝ ██║  ██║    ███████╗╚██████╔╝╚██████╗██║  ██║███████╗███████║███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║
+                                 ╚════╝ ╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝    ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝
 
-                                                            """ +
-            RESET
-    );
-}
-
-    private static void printServerUrls(List<Server> servers) {
-        System.out.println("Server running on:\n");
-
-        for (Server server : servers) {
-
-            String host = server.getHost();
-            String label = server.getDefaultServer() ? " (default)" : "";
-
-            System.out.println("🌐 " + server.getName() + label);
-
-            for (Object portObj : server.getPort()) {
-                int port = Integer.parseInt(portObj.toString());
-                System.out.println("   👉 http://" + host + ":" + port);
-            }
-
-            System.out.println();
-        }
+                                                                                      """
+                        +
+                        RESET);
     }
+
+   
 }

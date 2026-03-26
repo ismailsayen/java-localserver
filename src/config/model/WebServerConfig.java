@@ -24,7 +24,7 @@ public class WebServerConfig {
             Server server = Validators.ServerValidator(ser);
 
             if (server == null) {
-                System.err.println("[ERROR] Invalid server configuration: " + ser);
+                System.err.println("[ERROR] Invalid server configuration: " );
                 continue;
             }
 
@@ -43,7 +43,7 @@ public class WebServerConfig {
             LinkedHashSet<Object> routes = (LinkedHashSet<Object>) ser.get("routes");
             List<Route> extractedRoutes = extractRoutes(routes);
             if (extractedRoutes==null){
-                System.err.println("[ERROR] Invalid server configuration: " + ser);
+                System.err.println("[ERROR] Invalid server configuration: " );
                 continue;
             }
             server.setRoutes(extractedRoutes);
@@ -66,7 +66,7 @@ public class WebServerConfig {
 
             Route route = Validators.routeValidator(rt);
             if (route == null) {
-                System.err.println("[ERROR] Invalid route configuration: " + rt);
+                System.err.println("[ERROR] Invalid route configuration: ");
                 continue;
             }
             routeList.add(route);

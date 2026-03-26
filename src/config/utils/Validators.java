@@ -35,22 +35,22 @@ public class Validators {
         }
 
         LinkedHashSet<Object> ports = (LinkedHashSet<Object>) ser.get("port");
-
+        
         Iterator<Object> it = ports.iterator();
         while (it.hasNext()) {
             Object obj = it.next();
-
+            
             if (!(obj instanceof Number)) {
                 return null;
             }
-
+            
             Number n = (Number) obj;
             long p = n.longValue();
             if (p < 1024 || p > 65535) {
                 it.remove();
             }
         }
-
+        
         if (ports.isEmpty()) {
             return null;
         }
