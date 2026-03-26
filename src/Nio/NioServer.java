@@ -84,7 +84,7 @@ public class NioServer {
 
             ServerSocketChannel scc = ServerSocketChannel.open();
             scc.configureBlocking(false);
-            scc.bind(new InetSocketAddress(port));
+            scc.bind(new InetSocketAddress(host, port));
 
             scc.register(selector, SelectionKey.OP_ACCEPT, entry.getValue());
         }

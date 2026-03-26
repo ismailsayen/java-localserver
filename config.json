@@ -2,7 +2,7 @@
   {
     "name": "primary.local",
     "host": "127.0.0.2",
-    "port": [8081, 8082, 8083, 5000],
+    "port": [8081],
     "limitSize": 1024,
     "defaultServer": true,
 
@@ -94,11 +94,5 @@
         "directoryListing": true
       }
     ]
-  },
-  {
-    "name": "aaa",
-    "host": "127.0.0.2",
-    "port": [8081],
-    "routes": []
   }
 ]
