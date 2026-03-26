@@ -56,7 +56,7 @@ public class UploadsHandler implements HttpHandler {
         Session session = client.getHttpRequest().getSession();
 
         StringBuilder sb = new StringBuilder();
-        sb.append("HTTP/1.1 200 OK\r\n");
+        sb.append("HTTP/1.1 201 OK\r\n");
         sb.append("Content-Type: text/plain; charset=UTF-8\r\n");
         sb.append("Set-Cookie: SESSION_ID=" + session.getId() + "; Path=/\r\n");
         sb.append("Content-Length: ").append(bodyBytes.length).append("\r\n");

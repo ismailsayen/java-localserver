@@ -79,7 +79,8 @@ public class NioServer {
             String[] parts = entry.getKey().split(":");
             String host = parts[0];
             int port = Integer.parseInt(parts[1]);
-            if (!host.equals("0.0.0.0") && this.ppp.contains(port)) {
+            
+            if (this.ppp != null && !host.equals("0.0.0.0") && this.ppp.contains(port)) {
                 continue;
             }
             ServerSocketChannel scc = ServerSocketChannel.open();
