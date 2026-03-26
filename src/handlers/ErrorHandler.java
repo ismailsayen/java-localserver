@@ -17,6 +17,10 @@ public class ErrorHandler {
     }
 
     public void error(String statusCode, String msg) {
+        if (this.client.getServer() == null) {
+            System.out.println("Invalid request !");
+            return;
+        }
         Map<String, String> errorPages = this.client.getServer().getErrorPages();
 
         String code = String.valueOf(statusCode);

@@ -71,7 +71,13 @@ public class ClientHandler {
         buf.flip();
         if (!this.isHeadersFound) {
             byteArrayOutputStream.write(buf.array(), 0, bytesRead);
-            this.readHeaders(byteArrayOutputStream);
+            try {
+                this.readHeaders(byteArrayOutputStream);
+            } catch (Exception e) {
+                this.error.error("400", e.getMessage());
+                this.client.close();
+                return;
+            }
         } else if (this.isBodyExists) {
             if (!this.isMultiPart) {
                 this.readBody(Arrays.copyOf(this.buf.array(), bytesRead));

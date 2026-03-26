@@ -14,6 +14,9 @@ public class HttpHeader {
 
         // get Request_line
         String[] reqLine = request[0].split("\s");
+        if (reqLine.length != 3) {
+            throw new RuntimeException("Invalid headers");
+        }
 
         HttpHeader httpHeader = new HttpHeader();
 
