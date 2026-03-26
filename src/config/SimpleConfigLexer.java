@@ -1,6 +1,7 @@
 package config;
 
 import customError.FormatException;
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -155,24 +156,39 @@ public class SimpleConfigLexer {
         return list;
     }
 
-    private Long extractNumber() throws FormatException {
+    private Number extractNumber() throws FormatException {
 
-        StringBuilder sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder();
 
-        while (index < configText.length() && (Character.isDigit(configText.charAt(index)) ||
-                configText.charAt(index) == '.' || configText.charAt(index) == 'e' ||
-                configText.charAt(index) == 'E' || configText.charAt(index) == '+' ||
-                configText.charAt(index) == '-')) {
-            sb.append(configText.charAt(index));
-            index++;
-        }
-        try {
-            
-            return Long.valueOf(sb.toString());
-        } catch (NumberFormatException e) {
-            throw new FormatException("Invalid Integer value");
-        }
+    while (index < configText.length() && (Character.isDigit(configText.charAt(index)) ||
+            configText.charAt(index) == '.' || configText.charAt(index) == 'e' ||
+            configText.charAt(index) == 'E' || configText.charAt(index) == '+' ||
+            configText.charAt(index) == '-')) {
+        sb.append(configText.charAt(index));
+        index++;
     }
+
+    String number = sb.toString();
+
+    try {
+        if (number.contains(".") || number.contains("e") || number.contains("E")) {
+            return Double.valueOf(number);
+        }
+
+        try {
+            return Integer.valueOf(number);
+        } catch (NumberFormatException e1) {
+            try {
+                return Long.valueOf(number);
+            } catch (NumberFormatException e2) {
+                return new BigInteger(number);
+            }
+        }
+
+    } catch (NumberFormatException e) {
+        throw new FormatException("Invalid number: " + number);
+    }
+}
 
     private String extractString() throws FormatException {
 

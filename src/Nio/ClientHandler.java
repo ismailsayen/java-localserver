@@ -2,6 +2,7 @@ package Nio;
 
 import DTO.Server;
 import handlers.ErrorHandler;
+import handlers.UploadsHandler;
 import http.HttpHeader;
 import http.HttpRequest;
 import java.io.ByteArrayOutputStream;
@@ -15,11 +16,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 public class ClientHandler {
     private SocketChannel client;
-    private Server virtualHosts;
+    private List<Server> virtualHosts;
+    private Server server;
     private SelectionKey key;
     private HttpRequest httpRequest;
     private HttpHeader headerHttp;
@@ -34,12 +37,13 @@ public class ClientHandler {
     private Boolean isStartReading;
     private Boolean isChunked;
     private Boolean isBodyExists;
-    private ByteArrayOutputStream chunkBuffer = new ByteArrayOutputStream();
+    private ByteArrayOutputStream chunkBuffer;
     private int remainingChunkSize = -1;
     private boolean isRequestDone = false;
     private ErrorHandler error;
+    private boolean isMultiPart;
 
-    public ClientHandler(SocketChannel client, SelectionKey key, Server virtualHosts) {
+    public ClientHandler(SocketChannel client, SelectionKey key, List<Server> virtualHosts) {
         this.client = client;
         this.virtualHosts = virtualHosts;
         this.key = key;
@@ -49,6 +53,7 @@ public class ClientHandler {
         this.isBodyExists = false;
         buf = ByteBuffer.allocate(8096);
         this.byteArrayOutputStream = new ByteArrayOutputStream();
+        this.chunkBuffer = new ByteArrayOutputStream();
         this.error = new ErrorHandler(this);
     }
 
@@ -68,12 +73,16 @@ public class ClientHandler {
             byteArrayOutputStream.write(buf.array(), 0, bytesRead);
             this.readHeaders(byteArrayOutputStream);
         } else if (this.isBodyExists) {
-            this.readBody(Arrays.copyOf(this.buf.array(), bytesRead));
+            if (!this.isMultiPart) {
+                this.readBody(Arrays.copyOf(this.buf.array(), bytesRead));
+            } else {
+                this.readMultiPartBody(Arrays.copyOf(this.buf.array(), bytesRead));
+            }
         }
         buf.clear();
 
-        if (this.totalBodyBytes > this.virtualHosts.getLimitRequestBody()) {
-            this.error.error("400", "Data too much large");
+        if (!this.isMultiPart && this.server != null && this.totalBodyBytes > this.server.getLimitRequestBody()) {
+            this.error.error("414", "Payload Too Large");
             this.deleteTempFile();
             this.client.close();
             return;
@@ -83,17 +92,21 @@ public class ClientHandler {
             this.isRequestDone = true;
         }
 
-        if (this.httpRequest != null && this.isRequestDone) {
-            try {
-                if (this.fileOutputStream != null) {
-                    this.fileOutputStream.close();
-                }
+        try {
+            if (this.isMultiPart) {
                 this.httpRequest.executeHandler(this);
-            } catch (Exception e) {
-                this.error.error(httpRequest.getStatus(), e.getMessage());
-                this.deleteTempFile();
-                this.client.close();
+            } else {
+                if (this.httpRequest != null && this.isRequestDone) {
+                    if (this.fileOutputStream != null) {
+                        this.fileOutputStream.close();
+                    }
+                    this.httpRequest.executeHandler(this);
+                }
             }
+        } catch (Exception e) {
+            this.error.error(httpRequest.getStatus(), e.getMessage());
+            this.deleteTempFile();
+            this.client.close();
         }
     }
 
@@ -118,14 +131,15 @@ public class ClientHandler {
         if (index != -1) {
             this.isHeadersFound = true;
             this.headerHttp = HttpHeader.parseHeaders(message.substring(0, index));
-            this.httpRequest = new HttpRequest(headerHttp, this.virtualHosts);
+            this.server = selectServer();
+            this.httpRequest = new HttpRequest(headerHttp, this.server);
             String cl = this.headerHttp.getHeaders().get("content-length");
             String te = this.headerHttp.getHeaders().get("transfer-encoding");
             if (te != null && te.equals("chunked")) {
                 this.isChunked = true;
                 this.isBodyExists = true;
             } else if (cl != null) {
-                this.contentLength = Long.parseLong(this.headerHttp.getHeaders().get("content-length"));
+                this.contentLength = Long.valueOf(this.headerHttp.getHeaders().get("content-length"));
                 this.isBodyExists = true;
             } else {
                 this.isRequestDone = true;
@@ -135,14 +149,21 @@ public class ClientHandler {
                 this.httpRequest.HandleRequest(this);
                 byteArrayOutputStream.reset();
                 if (this.isBodyExists) {
+                    if (this.httpRequest.getHnadler() instanceof UploadsHandler) {
+                        this.isMultiPart = true;
+                    }
                     int bodyStart = index + 4;
                     if (bodyStart < data.length) {
                         byte[] bodyPart = Arrays.copyOfRange(data, bodyStart, data.length);
-                        this.readBody(bodyPart);
+                        if (!this.isMultiPart) {
+                            this.readBody(bodyPart);
+                        } else {
+                            this.readMultiPartBody(bodyPart);
+                        }
                     }
                 }
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                this.error.error(httpRequest.getStatus(), e.getMessage());
             }
         }
     }
@@ -210,6 +231,106 @@ public class ClientHandler {
         }
     }
 
+    private void readMultiPartBody(byte[] data) throws IOException {
+        this.byteArrayOutputStream.reset();
+        if (!this.isChunked) {
+            this.byteArrayOutputStream.write(data, 0, data.length);
+            this.totalBodyBytes += data.length;
+        } else {
+            chunkBuffer.write(data);
+            byte[] currentBuffer = chunkBuffer.toByteArray();
+            int offset = 0;
+
+            while (offset < currentBuffer.length) {
+                if (remainingChunkSize == -1) {
+                    int crlfIdx = indexOf(currentBuffer, "\r\n".getBytes(), offset);
+                    if (crlfIdx != -1) {
+                        String sizeStr = new String(Arrays.copyOfRange(currentBuffer, offset, crlfIdx)).trim();
+                        if (!sizeStr.isEmpty()) {
+                            remainingChunkSize = Integer.parseInt(sizeStr, 16);
+                            offset = crlfIdx + 2;
+
+                            if (remainingChunkSize == 0) {
+                                this.isRequestDone = true;
+                                break;
+                            }
+                        } else {
+                            offset = crlfIdx + 2;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                if (remainingChunkSize > 0) {
+                    int availableData = currentBuffer.length - offset;
+                    int bytesToRead = Math.min(remainingChunkSize, availableData);
+
+                    if (bytesToRead > 0) {
+                        this.byteArrayOutputStream.write(currentBuffer, offset, bytesToRead);
+                        this.totalBodyBytes += bytesToRead;
+                        remainingChunkSize -= bytesToRead;
+                        offset += bytesToRead;
+                    }
+
+                    if (remainingChunkSize == 0) {
+                        if (offset + 2 <= currentBuffer.length) {
+                            offset += 2;
+                            remainingChunkSize = -1;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            chunkBuffer.reset();
+            if (offset < currentBuffer.length) {
+                chunkBuffer.write(currentBuffer, offset, currentBuffer.length - offset);
+            }
+        }
+    }
+
+    private String getHostFromHeader() {
+        String host = this.headerHttp.getHeaders().get("host");
+
+        if (host == null)
+            return null;
+
+        // remove port if exists (example: test.com:80)
+        if (host.contains(":")) {
+            host = host.split(":")[0];
+        }
+
+        return host.trim();
+    }
+
+    private Server selectServer() {
+        String host = getHostFromHeader();
+
+        if (host == null) {
+            return getDefaultServer(); // default server
+        }
+
+        for (Server s : virtualHosts) {
+            if (host.equalsIgnoreCase(s.getName())) {
+                return s;
+            }
+        }
+
+        return getDefaultServer(); // fallback
+    }
+
+    private Server getDefaultServer() {
+
+        for (Server s : virtualHosts) {
+            if (s.getDefaultServer()) {
+                return s;
+            }
+        }
+
+        return virtualHosts.get(0);
+    }
+
     private void createdFileOutputStream() {
         try {
             String uniqueId = UUID.randomUUID().toString();
@@ -257,12 +378,20 @@ public class ClientHandler {
         this.client = client;
     }
 
-    public Server getVirtualHosts() {
+    public List<Server> getVirtualHosts() {
         return virtualHosts;
     }
 
-    public void setVirtualHosts(Server virtualHosts) {
+    public void setVirtualHosts(List<Server> virtualHosts) {
         this.virtualHosts = virtualHosts;
+    }
+
+    public Server getServer() {
+        return this.server;
+    }
+
+    public void setServer(Server server) {
+        this.server = server;
     }
 
     public HttpRequest getHttpRequest() {
@@ -327,5 +456,33 @@ public class ClientHandler {
 
     public void setErrorPages(ErrorHandler error) {
         this.error = error;
+    }
+
+    public ByteBuffer getBuf() {
+        return buf;
+    }
+
+    public void setBuf(ByteBuffer buf) {
+        this.buf = buf;
+    }
+
+    public ByteArrayOutputStream getChunkBuffer() {
+        return chunkBuffer;
+    }
+
+    public void setChunkBuffer(ByteArrayOutputStream chunkBuffer) {
+        this.chunkBuffer = chunkBuffer;
+    }
+
+    public boolean getIsRequestDone() {
+        return this.isRequestDone;
+    }
+
+    public void setIsRequestDone(boolean value) {
+        this.isRequestDone = value;
+    }
+
+    public Long getTotalBodyBytes() {
+        return this.totalBodyBytes;
     }
 }

@@ -3,16 +3,16 @@ package http;
 import DTO.Route;
 import DTO.Server;
 import Nio.ClientHandler;
+import config.utils.CookieParser;
+import config.utils.Session;
+import config.utils.SessionManager;
 import handlers.CgiHandler;
 import handlers.DeleteHandler;
 import handlers.RedirectHandler;
 import handlers.StaticFileHandler;
 import handlers.UploadsHandler;
-import config.utils.CookieParser;
-import config.utils.Session;
-import config.utils.SessionManager;
-import java.util.Map;
 import java.io.IOException;
+import java.util.Map;
 
 public class HttpRequest {
 

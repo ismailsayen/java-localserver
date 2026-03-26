@@ -16,8 +16,18 @@ public class UploadsHandler implements HttpHandler {
 
     private final ClientHandler client;
     private List<String> filesName = new ArrayList<>();
-    private static final int BUFFER_SIZE = 16384;
     private static final String HEADERS_END = "\r\n\r\n";
+
+    private ReadingState readingState = ReadingState.READING_HEADERS;
+    private FileOutputStream currentFile = null;
+    private final ByteArrayOutputStream window = new ByteArrayOutputStream();
+    private byte[] boundaryBytes;
+    private byte[] finalBoundaryBytes;
+    private boolean isStartProcessing = false;
+
+    private enum ReadingState {
+        READING_HEADERS, READING_BODY, DONE
+    }
 
     public UploadsHandler(ClientHandler client) {
         this.client = client;
@@ -25,10 +35,18 @@ public class UploadsHandler implements HttpHandler {
 
     @Override
     public void handle() throws Exception {
-        this.filesName.clear();
-        processMultipartBody();
-        this.client.setIsResponseDone(true);
-        client.getKey().interestOps(SelectionKey.OP_WRITE);
+        if (this.client.getTotalBodyBytes() <= this.client.getServer().getLimitRequestBody()) {
+            processMultipartBody(this.client.getByteArrayOutputStream().toByteArray());
+        }
+        if (this.client.getIsRequestDone()) {
+            if (this.client.getTotalBodyBytes() > this.client.getServer().getLimitRequestBody()) {
+                this.deleteFiles();
+                this.client.getHttpRequest().setStatus("413");
+                throw new RuntimeException("Payload Too Large");
+            }
+            this.client.setIsResponseDone(true);
+            client.getKey().interestOps(SelectionKey.OP_WRITE);
+        }
     }
 
     @Override
@@ -58,76 +76,72 @@ public class UploadsHandler implements HttpHandler {
         }
     }
 
-    private void processMultipartBody() throws IOException {
-        String contentType = this.client.getHttpHeader().getHeaders().get("content-type");
-        String boundary = extractBoundary(contentType);
-        byte[] boundaryBytes = ("\r\n--" + boundary).getBytes(StandardCharsets.UTF_8);
-
-        Path bodyPath = Paths.get("temp_uploads", this.client.getBodyFileTempName());
-        if (!Files.exists(bodyPath)) {
-            this.client.getHttpRequest().setStatus("404");
-            throw new RuntimeException("Body file not found");
+    public void processMultipartBody(byte[] chunk) throws IOException {
+        if (!isStartProcessing) {
+            this.filesName.clear();
+            String contentType = this.client.getHttpHeader().getHeaders().get("content-type");
+            String boundary = extractBoundary(contentType);
+            this.boundaryBytes = ("\r\n--" + boundary).getBytes(StandardCharsets.UTF_8);
+            this.finalBoundaryBytes = ("--" + boundary + "--").getBytes(StandardCharsets.UTF_8);
+            this.isStartProcessing = true;
         }
 
-        try (BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(bodyPath))) {
-            byte[] buffer = new byte[BUFFER_SIZE];
-            ByteArrayOutputStream window = new ByteArrayOutputStream();
-            FileOutputStream currentFile = null;
-            boolean readingHeaders = true;
-            int bytesRead;
+        window.write(chunk, 0, chunk.length);
+        byte[] data = window.toByteArray();
+        window.reset();
 
-            while ((bytesRead = bis.read(buffer)) != -1) {
-                window.write(buffer, 0, bytesRead);
-                byte[] data = window.toByteArray();
-                window.reset();
+        int pos = 0;
+        while (pos < data.length) {
+            int finalBoundaryIdx = indexOf(data, finalBoundaryBytes, pos);
+            if (finalBoundaryIdx != -1) {
+                if (currentFile != null) {
+                    currentFile.write(data, pos, finalBoundaryIdx - pos);
+                    currentFile.close();
+                    currentFile = null;
+                }
+                this.readingState = ReadingState.DONE;
+                return;
+            }
 
-                int pos = 0;
-                while (pos < data.length) {
-                    if (readingHeaders) {
-                        int headersEndIndex = indexOf(data, HEADERS_END.getBytes(), pos);
-                        if (headersEndIndex != -1) {
-                            String headers = new String(data, pos, headersEndIndex - pos, StandardCharsets.UTF_8);
-                            String fileName = extractFileName(headers);
+            if (this.readingState == ReadingState.READING_HEADERS) {
+                int headersEndIndex = indexOf(data, HEADERS_END.getBytes(), pos);
+                if (headersEndIndex != -1) {
+                    String headers = new String(data, pos, headersEndIndex - pos, StandardCharsets.UTF_8);
+                    String fileName = extractFileName(headers);
 
-                            if (fileName != null) {
-                                currentFile = createUniqueFile(fileName);
-                            }
-
-                            pos = headersEndIndex + HEADERS_END.length();
-                            readingHeaders = false;
-                        } else {
-                            window.write(data, pos, data.length - pos);
-                            break;
-                        }
-                    } else {
-                        int nextBoundaryIndex = indexOf(data, boundaryBytes, pos);
-
-                        if (nextBoundaryIndex != -1) {
-                            if (currentFile != null) {
-                                currentFile.write(data, pos, nextBoundaryIndex - pos);
-                                currentFile.close();
-                                currentFile = null;
-                            }
-                            pos = nextBoundaryIndex + boundaryBytes.length;
-                            readingHeaders = true;
-                        } else {
-                            int safeWriteLen = (data.length - pos) - boundaryBytes.length;
-                            if (safeWriteLen > 0) {
-                                if (currentFile != null) {
-                                    currentFile.write(data, pos, safeWriteLen);
-                                }
-                                pos += safeWriteLen;
-                            }
-                            window.write(data, pos, data.length - pos);
-                            break;
-                        }
+                    if (fileName != null) {
+                        this.currentFile = createUniqueFile(fileName);
                     }
+
+                    pos = headersEndIndex + HEADERS_END.length();
+                    this.readingState = ReadingState.READING_BODY;
+                } else {
+                    window.write(data, pos, data.length - pos);
+                    break;
+                }
+            } else if (this.readingState == ReadingState.READING_BODY) {
+                int nextBoundaryIndex = indexOf(data, boundaryBytes, pos);
+
+                if (nextBoundaryIndex != -1) {
+                    if (currentFile != null) {
+                        currentFile.write(data, pos, nextBoundaryIndex - pos);
+                        currentFile.close();
+                        currentFile = null;
+                    }
+                    pos = nextBoundaryIndex + boundaryBytes.length;
+                    this.readingState = ReadingState.READING_HEADERS;
+                } else {
+                    int safeWriteLen = (data.length - pos) - boundaryBytes.length;
+                    if (safeWriteLen > 0) {
+                        if (currentFile != null) {
+                            currentFile.write(data, pos, safeWriteLen);
+                        }
+                        pos += safeWriteLen;
+                    }
+                    window.write(data, pos, data.length - pos);
+                    break;
                 }
             }
-            if (currentFile != null)
-                currentFile.close();
-        } catch (Exception e) {
-            throw new RuntimeException("Body file not found");
         }
     }
 
@@ -193,5 +207,19 @@ public class UploadsHandler implements HttpHandler {
         start += 10;
         int end = headers.indexOf("\"", start);
         return headers.substring(start, end);
+    }
+
+    private void deleteFiles() throws IOException {
+        String root = this.client.getHttpRequest().getRoute().getRoot();
+        Path directory = Paths.get(root);
+
+        if (!Files.exists(directory)) {
+            return;
+        }
+
+        for (String fileName : this.filesName) {
+            Path filePath = directory.resolve(fileName);
+            Files.deleteIfExists(filePath);
+        }
     }
 }

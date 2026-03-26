@@ -42,6 +42,10 @@ public class WebServerConfig {
 
             LinkedHashSet<Object> routes = (LinkedHashSet<Object>) ser.get("routes");
             List<Route> extractedRoutes = extractRoutes(routes);
+            if (extractedRoutes==null){
+                System.err.println("[ERROR] Invalid server configuration: " + ser);
+                continue;
+            }
             server.setRoutes(extractedRoutes);
             serversList.add(server);
         }
@@ -51,6 +55,10 @@ public class WebServerConfig {
     private List<Route> extractRoutes(LinkedHashSet<Object> routes) {
 
         List<Route> routeList = new ArrayList<>();
+
+        if(routes==null){
+            return null;
+        }
 
         for (Object elem : routes) {
 
